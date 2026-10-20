@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#071321">
+<meta name="theme-color" content="#08111f">
 <meta name="description" content="VCrypto canlı kripto piyasası, coin listesi ve favori takibi.">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
@@ -140,18 +140,31 @@ main{padding-top:18px}.screen{display:none;animation:screenIn .2s ease both}.scr
 </style>
 
 <style id="vcrypto-turquoise-theme">
-/* Turquoise UI accents. The icon.svg asset and its colors are intentionally unchanged. */
-:root{--teal:#35dcca;--gold:#35dcca}
-.tag{border-color:#286e68;background:#102d31;color:#8af5ec}
-.live-dot{box-shadow:0 0 10px #35dcca}
-.market-overview:after{box-shadow:0 0 0 24px #35dcca0d,0 0 0 48px #35dcca08}
-.filter.active{background:#123d43;border-color:#247a79;color:#8af5ec}
-.nav-item.active{color:#35dcca;background:#123d43;border-color:#247a79}
-.primary-btn{border-color:#286e68;background:#123d43;color:#8af5ec}
-.text-btn,.menu-icon{color:#35dcca}
-button:hover,.filter:hover{border-color:#35dcca}
-.search:focus-within{border-color:#35dcca}
-button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline-color:#35dcca}
+/* Original agreed look: navy surfaces with restrained turquoise accents. Keep icon.svg untouched. */
+:root{--bg:#08111f;--panel:#101d30;--panel2:#0c1728;--line:#21364d;--teal:#21d6b0;--gold:#21d6b0}
+html,body{background:#08111f!important}
+.app{background:#08111f!important}
+.topbar{background:#08111fed!important;border-bottom-color:#21364d!important}
+.panel{background:#101d30!important;border-color:#21364d!important}
+.market-overview{background:linear-gradient(130deg,#14243a,#101d30 58%,#0c1728)!important;border-color:#21364d!important}
+.market-overview:after{border-color:#21d6b01a!important;box-shadow:0 0 0 24px #21d6b00d,0 0 0 48px #21d6b008!important}
+.metric,.search{background:#0c1728!important;border-color:#21364d!important}
+.filter.active{background:#123b3a!important;border-color:#21d6b0!important;color:#7af0d8!important}
+.nav-item.active{color:#21d6b0!important;background:#123b3a!important;border-color:#1c695f!important}
+.primary-btn{border-color:#1c8b78!important;background:#123b3a!important;color:#7af0d8!important}
+.secondary-btn{background:#0c1728!important;border-color:#21364d!important}
+.tag{border-color:#1c695f!important;background:#123b3a!important;color:#7af0d8!important}
+.live-dot{background:#21d6b0!important;box-shadow:0 0 10px #21d6b0!important}
+.text-btn,.menu-icon{color:#21d6b0!important}
+.menu-icon{background:#122a3b!important}
+.search:focus-within{border-color:#21d6b0!important}
+button:hover,.filter:hover{border-color:#21d6b0!important}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline-color:#21d6b0!important}
+.bottom-nav{background:#08111ff5!important;border-color:#21364d!important}
+.detail-sheet{background:#101d30!important;border-color:#21364d!important}
+.detail-stat{background:#0c1728!important;border-color:#21364d!important}
+.toast{background:#123b3a!important;border-color:#1c695f!important;color:#b9fff0!important}
+/* The logo and app icon keep their original colors. */
 </style>
 
 </head>
