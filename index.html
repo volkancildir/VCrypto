@@ -91,7 +91,6 @@ main{padding-top:18px}.screen{display:none;animation:screenIn .2s ease both}.scr
   main{padding-top:10px}
   .screen-heading{margin-top:2px}
   .market-overview{border-radius:14px}
-  #screen-market > .panel:not(.market-overview){background:transparent;border:0;box-shadow:none;padding:0}
   .coin-row{border-bottom:1px solid #252a31}
   .search{border-radius:10px;background:#161a1e}
   .bottom-nav{background:#0b0e11f5;border-top:1px solid #2b3139}
@@ -140,6 +139,9 @@ main{padding-top:18px}.screen{display:none;animation:screenIn .2s ease both}.scr
 
 /* VCrypto single-source theme: navy surfaces, turquoise accents; market gain/loss colors and icon remain unchanged. */
 /* Theme overrides are kept in this stylesheet so all screens use the same palette. */
+/* Keep the market coin list card and coin icons visible. */
+#screen-market > article.panel:not(.market-overview){background:var(--panel)!important;border:1px solid var(--line)!important;box-shadow:0 9px 28px #00000012!important;padding:16px!important}
+.coin-icon{display:grid!important;visibility:visible!important;opacity:1!important;width:48px!important;height:48px!important;flex:0 0 48px!important;object-fit:cover!important;border-radius:50%!important}
 :root{--bg:#08111f;--panel:#101d30;--panel2:#0c1728;--line:#21364d;--teal:#21d6b0;--gold:#21d6b0}
 html,body{background:#08111f!important}
 .app{background:#08111f!important}
