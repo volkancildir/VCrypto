@@ -1,13 +1,13 @@
 {
-  "name": "VCrypto",
+  "name": "VCrypto — Kripto Piyasası",
   "short_name": "VCrypto",
-  "description": "Canlı kripto para piyasası ve coin listesi",
+  "description": "Mobil uyumlu canlı kripto piyasası, coin sıralaması ve favori takibi.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#07101e",
-  "theme_color": "#08111f",
+  "background_color": "#071321",
+  "theme_color": "#071321",
   "icons": [
     {
       "src": "./icon.svg",
