@@ -105,6 +105,37 @@ main{padding-top:18px}.screen{display:none;animation:screenIn .2s ease both}.scr
   .bottom-nav{position:fixed;left:0;right:0;bottom:0;transform:none;width:100%;border-radius:0 0 0 0}
   .detail-sheet{width:100%;margin:0;border-radius:23px 23px 0 0;border-bottom:0}
 }
+/* Slightly closer mobile scale: preserve the approved layout and only improve readability */
+@media(max-width:600px), (hover:none) and (pointer:coarse){
+  .app{padding-left:10px;padding-right:10px}
+  body{font-size:18px;line-height:1.55}
+  .brand-name{font-size:22px}
+  .brand-sub{font-size:14px}
+  .h1{font-size:32px}
+  .sub{font-size:16px}
+  .eyebrow{font-size:13px}
+  .section-title{font-size:18px}
+  .metric-label{font-size:14px}
+  .metric-value{font-size:16px}
+  .filter{font-size:15px;padding:11px 14px}
+  .search input{font-size:17px}
+  .coin-row{padding:18px 0;min-height:76px}
+  .coin-icon{width:44px;height:44px;flex-basis:44px}
+  .coin-name{font-size:17px}
+  .coin-symbol{font-size:14px}
+  .coin-price{font-size:16px}
+  .coin-change{font-size:14px}
+  .star{font-size:24px}
+  .nav-item{font-size:13px}
+  .nav-icon{font-size:24px}
+  .icon-btn{font-size:21px}
+  .detail-name{font-size:21px}
+  .detail-symbol{font-size:15px}
+  .detail-stat span{font-size:14px}
+  .detail-stat strong{font-size:16px}
+  .menu-title{font-size:16px}
+  .menu-desc{font-size:14px}
+}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
 </style>
 </head>
