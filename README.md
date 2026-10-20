@@ -1,18 +1,20 @@
 # VCrypto
 
-VCrypto is a standalone, mobile-friendly progressive web app focused only on the coin list and global crypto market summary.
+VCrypto, mobil ekrana göre tasarlanmış ve desteklenen tarayıcılarda ana ekrana yüklenebilen kripto piyasası web uygulamasıdır.
 
-- Live global market summary and top 250 coins from the CoinGecko public API
-- Search by coin name or symbol
-- Sort by rank, price, market cap, 24-hour volume, 24-hour change and all-time high
-- Responsive mobile layout with compact coin cards
-- The original VCryptoScope V-arrow icon retained unchanged
-- PWA manifest and service worker for installation and app-shell caching
+## Özellikler
+- CoinGecko Public API üzerinden canlı global piyasa özeti ve ilk 250 coin
+- Coin adı/sembolü arama, sıralama ve 24 saatlik yükselen/düşen listeleri
+- Cihazda saklanan favoriler
+- Coin detay paneli: fiyat, piyasa değeri, hacim, ATH ve sıralama
+- Telefonlarda sabit alt navigasyon, güvenli alan desteği ve duyarlı masaüstü görünümü
+- PWA manifesti ve çevrimdışı uygulama kabuğu önbelleği
+- Piyasa verilerini iki dakikada bir otomatik yenileme
 
-## Publish with GitHub Pages
+## Yayınlama
+GitHub Pages kaynağı GitHub Actions olarak ayarlandığında `.github/workflows/pages.yml` otomatik yayınlar.
 
-Open **Settings → Pages**, choose **Deploy from a branch**, select **main** and folder **/(root)**, then save. Wait for GitHub Pages to publish the site.
+## Ana ekrana yükleme
+Siteyi desteklenen bir tarayıcıda açıp **Ana ekrana ekle / Uygulamayı yükle** seçeneğini kullan. Uygulama içi tarayıcı kurulum seçeneğini göstermeyebilir; bu durumda bağlantıyı Chrome gibi bir tarayıcıda aç.
 
-When it is published, open the Pages URL on your phone and use the browser menu's **Add to Home screen** or **Install app** option.
-
-CoinGecko's public API has rate limits, so live market data may temporarily fail to load.
+Piyasa verileri CoinGecko Public API'den alınır ve API limitlerine bağlı olabilir. VCrypto yatırım tavsiyesi değildir.
