@@ -28,7 +28,7 @@ main{padding-top:18px}.screen{display:none;animation:screenIn .2s ease both}.scr
 @media(min-width:700px){body{padding:20px 0}.app{min-height:calc(100vh - 40px);border:1px solid #1a3043;border-radius:28px;padding-bottom:110px;overflow:hidden}.topbar{position:relative}.bottom-nav{bottom:18px;width:min(680px,calc(100% - 40px));border:1px solid #294054;border-radius:20px;padding:7px;background:#081725ed}.detail-sheet{border-bottom:1px solid #294054;border-radius:23px;margin-bottom:20px}}
 @media(max-width:380px){.app{padding-left:12px;padding-right:12px}.panel{padding:13px}.metric-row{gap:5px}.metric{padding:8px}.metric-value{font-size:11px}.coin-row{gap:7px}.coin-icon{width:32px;height:32px;flex-basis:32px}.big-value{font-size:26px}.nav-item{font-size:8px}.nav-icon{font-size:17px}}
 /* Mobile-first readability and full-width layout */
-@media(max-width:600px){
+@media(max-width:600px), (hover:none) and (pointer:coarse){
   html,body{width:100%;max-width:100%;overflow-x:hidden}
   body{font-size:17px;line-height:1.55}
   .app{width:100%;max-width:none;margin:0;padding:0 14px calc(100px + env(safe-area-inset-bottom))}
@@ -83,6 +83,15 @@ main{padding-top:18px}.screen{display:none;animation:screenIn .2s ease both}.scr
   .menu-title{font-size:15px}
   .menu-desc{font-size:13px;line-height:1.5}
   .menu-icon{width:40px;height:40px;flex-basis:40px}
+}
+/* Keep phone layouts full-screen even when an in-app browser reports a desktop-width viewport */
+@media(hover:none) and (pointer:coarse){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  body{padding:0}
+  .app{width:100%;max-width:none;min-height:100vh;margin:0;border:0;border-radius:0;padding:0 14px calc(100px + env(safe-area-inset-bottom));overflow:visible}
+  .topbar{position:sticky;top:0}
+  .bottom-nav{position:fixed;left:0;right:0;bottom:0;transform:none;width:100%;border-radius:0 0 0 0}
+  .detail-sheet{width:100%;margin:0;border-radius:23px 23px 0 0;border-bottom:0}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;scroll-behavior:auto!important;transition:none!important}}
 </style>
