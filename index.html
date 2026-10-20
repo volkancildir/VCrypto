@@ -342,7 +342,7 @@ async function getMarkets(){
     const fallback=await getJson('https://api.coinpaprika.com/v1/tickers?quotes=USD');
     if(!Array.isArray(fallback)||!fallback.length)throw primaryError;
     return fallback.slice(0,250).map(c=>({
-      id:c.id,name:c.name,symbol:c.symbol,image:'',
+      id:c.id,name:c.name,symbol:c.symbol,image:'https://static.coinpaprika.com/coin/'+c.id+'/logo.png',
       current_price:Number(c.quotes?.USD?.price),
       market_cap:Number(c.quotes?.USD?.market_cap),
       market_cap_rank:Number(c.rank),
