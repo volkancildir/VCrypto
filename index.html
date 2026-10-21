@@ -444,7 +444,7 @@ async function loadSignalUniverse(){
  const add=c=>{
   const cap=Number(c.market_cap),sym=String(c.symbol||'').toUpperCase();
   if(!c||!c.id||!Number.isFinite(cap)||cap<minCap||excluded(c))return;
-  const key=String(c.id).toLowerCase();
+  const key=sym;
   const previous=byKey.get(key);
   if(!previous||cap>Number(previous.market_cap))byKey.set(key,{...previous,...c,market_cap:cap,symbol:sym});
  };
