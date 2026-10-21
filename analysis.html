@@ -43,6 +43,11 @@
 .indicator-value{font-size:14px}.indicator-note{font-size:12px}
 .tf{font-size:14px}.picker-option{font-size:13px}
 }
+
+/* Embedded analysis tab hides its standalone navigation; preserve larger readable labels. */
+body.embedded{padding-bottom:10px}
+body.embedded .topbar,body.embedded .bottom-nav{display:none}
+body.embedded .app{padding-left:10px;padding-right:10px}
 </style>
 </head>
 <body>
@@ -63,7 +68,7 @@
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-const params=new URLSearchParams(location.search);
+const params=new URLSearchParams(location.search);if(params.get('embed')==='1')document.body.classList.add('embedded');
 let symbol=(params.get('symbol')||params.get('coin')||'BTC').toUpperCase().replace(/[^A-Z0-9]/g,'');
 let coinName=params.get('name')||symbol;
 let view='4h',interval='4h',klines=[],ticker=null,resizeTimer,miniSeries={};
