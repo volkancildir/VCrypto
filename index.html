@@ -752,6 +752,38 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.
 }
 </style>
 
+
+<style>
+/* v45: Al/Sat sayfasındaki tüm metinleri üç kademe büyüt; diğer sayfalara dokunma. */
+@media(max-width:600px),(hover:none) and (pointer:coarse){
+ #screen-signal{font-size:26px!important}
+ #screen-signal .eyebrow{font-size:25px!important}
+ #screen-signal .h1{font-size:58px!important;line-height:1.15!important}
+ #screen-signal .sub{font-size:31px!important;line-height:1.45!important}
+ #screen-signal .tag{font-size:24px!important;padding:13px 16px!important}
+ #screen-signal .signal-stat span{font-size:24px!important}
+ #screen-signal .signal-stat strong{font-size:36px!important}
+ #screen-signal .signal-controls .sub{font-size:28px!important}
+ #screen-signal #signalTimeframe,#screen-signal .signal-refresh{font-size:28px!important}
+ #screen-signal .signal-name{font-size:29px!important;line-height:1.3!important}
+ #screen-signal .signal-meta{font-size:24px!important;line-height:1.45!important}
+ #screen-signal .signal-badge{font-size:25px!important;padding:11px 14px!important}
+ #screen-signal .signal-price{font-size:28px!important;line-height:1.35!important}
+ #screen-signal .signal-details{font-size:24px!important;line-height:1.55!important}
+ #screen-signal .section-title{font-size:31px!important}
+ #screen-signal .signal-footnote{font-size:24px!important;line-height:1.55!important}
+ #screen-signal .empty{font-size:25px!important;line-height:1.5!important}
+}
+@media(max-width:420px){
+ #screen-signal .h1{font-size:54px!important}
+ #screen-signal .signal-stat span{font-size:22px!important}
+ #screen-signal .signal-stat strong{font-size:33px!important}
+ #screen-signal .signal-name{font-size:27px!important}
+ #screen-signal .signal-meta{font-size:22px!important}
+ #screen-signal .signal-details{font-size:22px!important}
+}
+</style>
+
 </body>
 </html>
 <style>
