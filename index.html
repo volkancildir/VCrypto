@@ -12,7 +12,7 @@
 :root{color-scheme:dark;--bg:#0b0e11;--panel:#1e2329;--panel2:#161a1e;--line:#2b3139;--text:#f0f2f5;--muted:#848e9c;--teal:#21d6b0;--green:#0ecb81;--red:#f6465d;--gold:#21d6b0}
 *{box-sizing:border-box}html{background:var(--bg);scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;min-height:100vh}
 button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:3px}button:disabled{opacity:.55;cursor:wait}
-.app{width:100%;max-width:760px;min-height:100vh;margin:0 auto;padding:0 16px calc(96px + env(safe-area-inset-bottom))}
+.app{width:100%;max-width:800px;min-height:100vh;margin:0 auto;padding:0 14px calc(96px + env(safe-area-inset-bottom))}
 .topbar{height:66px;display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:5;background:#0b0e11ed;backdrop-filter:blur(16px);border-bottom:1px solid #1d3043}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}.logo{width:38px;height:38px;flex:0 0 38px;border-radius:12px;object-fit:cover}.brand-name{font-size:17px;font-weight:850;letter-spacing:-.5px}.brand-name span{color:var(--teal)}.brand-sub{font-size:10px;color:var(--muted);margin-top:1px}.top-actions{display:flex;gap:8px}.icon-btn{width:38px;height:38px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--text);display:grid;place-items:center;font-size:17px}.icon-btn:active,.nav-item:active{transform:scale(.97)}
 main{padding-top:18px}.screen{display:none;animation:screenIn .2s ease both}.screen.active{display:block}@keyframes screenIn{from{opacity:.25;transform:translateY(7px)}to{opacity:1;transform:none}}
@@ -140,8 +140,10 @@ main{padding-top:18px}.screen{display:none;animation:screenIn .2s ease both}.scr
 /* VCrypto single-source theme: navy surfaces, turquoise accents; market gain/loss colors and icon remain unchanged. */
 /* Theme overrides are kept in this stylesheet so all screens use the same palette. */
 /* Keep the market coin list card and coin icons visible. */
-#screen-market > article.panel:not(.market-overview){background:var(--panel)!important;border:1px solid var(--line)!important;box-shadow:0 9px 28px #00000012!important;padding:18px!important}
-#screen-market .coin-row{padding:15px 0}
+#screen-market > article.panel:not(.market-overview){background:var(--panel)!important;border:1px solid var(--line)!important;box-shadow:0 9px 28px #00000012!important;padding:20px!important}
+#screen-market .coin-row{padding:16px 0}
+#screen-market .search{height:52px;padding:0 14px;gap:11px}
+#screen-market .search input{font-size:15px}
 .coin-icon{display:grid!important;visibility:visible!important;opacity:1!important;width:48px!important;height:48px!important;flex:0 0 48px!important;object-fit:cover!important;border-radius:50%!important}
 :root{--bg:#08111f;--panel:#101d30;--panel2:#0c1728;--line:#21364d;--teal:#21d6b0;--gold:#21d6b0}
 html,body{background:#08111f!important}
