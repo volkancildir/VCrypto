@@ -497,7 +497,7 @@ function fmtSignalPct(v){return (v>0?'+':'')+(v*100).toFixed(2)+'%'}
 function signalRowHtml(r){
  const cls=r.signal==='AL'?'signal-buy':r.signal==='SAT'?'signal-sell':'signal-neutral',width=Math.min(100,Math.abs(r.score)/5.5*100),fallback=safe(String(r.symbol||'?').slice(0,3).toUpperCase());
  const icon=r.image?'<img class="signal-coin" loading="lazy" src="'+safe(r.image)+'" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="signal-coin signal-coin-fallback" style="display:none">'+fallback+'</span>':'<span class="signal-coin signal-coin-fallback">'+fallback+'</span>';
- return '<div class="signal-row"><div><div class="signal-main">'+icon+'<div style="min-width:0"><div class="signal-name">'+safe(r.name)+' <span class="signal-meta">'+safe(r.symbol)+'</span></div><div class="signal-meta">'+price(r.price)+' · Skor '+(r.score>0?'+':'')+r.score.toFixed(1)+' · Eşik '+r.threshold.toFixed(1)+'</div></div></div><div class="signal-meter"><span style="width:'+width+'%;background:'+(r.score>=0?'#21d6b0':'#f6465d')+'"></span></div><div class="signal-details">RSI '+r.rsi.toFixed(0)+' · Eğitim '+r.trainTrades+' işlem · Test '+r.test.trades+' işlem · Test neti (işlem getirileri toplamı) '+(r.test.trades?fmtSignalPct(r.test.net):'yetersiz veri')+' · Kazanma '+(r.test.trades?(r.test.winRate*100).toFixed(0)+'%':'—')+'</div></div><div class="signal-side"><span class="signal-badge '+cls+'">'+r.signal+'</span><div class="signal-price">'+(r.change>0?'+':'')+r.change.toFixed(2)+'% / 24s</div></div></div>'
+ return '<div class="signal-row"><div><div class="signal-main">'+icon+'<div style="min-width:0"><div class="signal-name">'+safe(r.name)+' <span class="signal-meta">'+safe(r.symbol)+'</span></div><div class="signal-meta">Fiyat '+price(r.entryPrice)+' · Hedef '+price(r.targetPrice)+' · Stop '+price(r.stopPrice)+'</div></div></div><div class="signal-meter"><span style="width:'+width+'%;background:'+(r.score>=0?'#21d6b0':'#f6465d')+'"></span></div><div class="signal-details">Hedef potansiyeli <b>'+fmtSignalPct(r.targetReturn)+'</b> · Stop riski '+fmtSignalPct(-r.stopReturn)+' · Risk/getiri '+r.riskReward.toFixed(2)+'x · RSI '+r.rsi.toFixed(0)+' · '+(r.targetSource||'Teknik hedef')+'</div><div class="signal-details">Geçmiş test: '+(r.test.trades?fmtSignalPct(r.test.net):'yetersiz veri')+' · '+r.test.trades+' işlem · kazanma '+(r.test.trades?(r.test.winRate*100).toFixed(0)+'%':'—')+'</div></div><div class="signal-side"><span class="signal-badge '+cls+'">'+r.signal+'</span><div class="signal-price">'+(r.change>0?'+':'')+r.change.toFixed(2)+'% / 24s</div><div class="signal-price" style="color:#21d6b0">Hedef '+fmtSignalPct(r.targetReturn)+'</div></div></div>'
 }
 async function loadSignalUniverse(){
  const minCap=250000000,byKey=new Map();
@@ -551,8 +551,13 @@ async function runSignalScan(force=false){
    if(!response.ok)throw Error('pair unavailable');const raw=await response.json();if(!Array.isArray(raw)||raw.length<250)throw Error('insufficient candles');
    const candles=raw.map(k=>({t:Number(k[0]),o:Number(k[1]),h:Number(k[2]),l:Number(k[3]),c:Number(k[4]),v:Number(k[5])})).filter(k=>[k.o,k.h,k.l,k.c,k.v].every(Number.isFinite));
    const series=buildSignalSeries(candles),opt=optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)throw Error('indicator unavailable');
-   const validated=opt.test.trades>=3&&opt.test.net>0,signal=score>=opt.threshold&&validated?'AL':score<=-opt.threshold?'SAT':'NÖTR';
-   results[idx]={name:coin.name,symbol:sym,image:coin.image,price:coin.current_price,change:Number(coin.price_change_percentage_24h)||0,score,rsi:series.rsi[i],threshold:opt.threshold,trainTrades:opt.trainTrades,test:opt.test,signal,validated};
+   const entryPrice=series.c[i],recent=candles.slice(Math.max(0,candles.length-51),candles.length-1),priorClose=series.c[i-1];
+   const atrValues=[];for(let j=Math.max(1,candles.length-15);j<candles.length;j++){const k=candles[j],pc=series.c[j-1];atrValues.push(Math.max(k.h-k.l,Math.abs(k.h-pc),Math.abs(k.l-pc)))}const atr=atrValues.length?atrValues.reduce((a,b)=>a+b,0)/atrValues.length:entryPrice*.03;
+   const resistance=recent.length?Math.max(...recent.map(k=>k.h)):entryPrice+atr*2;
+   const targetPrice=resistance>entryPrice*1.005?resistance:entryPrice+atr*2;
+   const stopPrice=Math.max(entryPrice*.001,entryPrice-atr*1.5),targetReturn=targetPrice/entryPrice-1,stopReturn=stopPrice/entryPrice-1,riskReward=targetReturn/Math.abs(stopReturn);
+   const validated=opt.test.trades>=3&&opt.test.net>0,signal=score>=opt.threshold&&validated&&targetReturn>0&&riskReward>=1.2?'AL':score<=-opt.threshold?'SAT':'NÖTR';
+   results[idx]={name:coin.name,symbol:sym,image:coin.image,price:coin.current_price,entryPrice,targetPrice,stopPrice,targetReturn,stopReturn,riskReward,targetSource:resistance>entryPrice*1.005?'Son 50 mum direnci':'ATR bazlı hedef',change:Number(coin.price_change_percentage_24h)||0,score,rsi:series.rsi[i],threshold:opt.threshold,trainTrades:opt.trainTrades,test:opt.test,signal,validated};
   }catch(e){results[idx]={name:coin.name,symbol:sym,image:coin.image,price:coin.current_price,change:Number(coin.price_change_percentage_24h)||0,signal:'ATLANDI',reason:'Binance USDT verisi yok veya yetersiz'}}}}
   await Promise.all(Array.from({length:4},worker));signalCache=results.filter(Boolean).sort((a,b)=>{const rank={AL:0,'NÖTR':1,SAT:2,ATLANDI:3};return (rank[a.signal]??4)-(rank[b.signal]??4)||(b.score||-99)-(a.score||-99)});
   $('signalRows').innerHTML=signalCache.map(r=>r.signal==='ATLANDI'?'<div class="signal-row"><div><div class="signal-name">'+safe(r.name)+' ('+safe(r.symbol)+')</div><div class="signal-meta">'+safe(r.reason)+'</div></div><span class="signal-badge signal-neutral">ATLANDI</span></div>':signalRowHtml(r)).join('')||'<div class="empty">Sinyal üretilemedi.</div>';
@@ -604,6 +609,15 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.
  #screen-signal .signal-name{font-size:20px!important}
  #screen-signal .signal-meta{font-size:16px!important}
  #screen-signal .signal-details{font-size:16px!important}
+}
+</style>
+
+<style>
+/* v44: Al/Sat hedef fiyatı ve potansiyel getiri kartları */
+@media(max-width:600px),(hover:none) and (pointer:coarse){
+ #screen-signal .signal-row{padding:23px 0!important;min-height:130px}
+ #screen-signal .signal-details{overflow-wrap:anywhere}
+ #screen-signal .signal-details b{color:#21d6b0;font-size:1.08em}
 }
 </style>
 
