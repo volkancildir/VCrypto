@@ -169,6 +169,7 @@ html,body{touch-action:pan-x pan-y;}
   ['gesturestart','gesturechange','gestureend'].forEach(function(type){document.addEventListener(type,function(event){event.preventDefault();},{passive:false,capture:true});});
 })();
 </script>
+<style>body.embedded .topbar{display:flex!important}</style>
 </head>
 <body>
 <div class="app">
