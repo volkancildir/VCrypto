@@ -497,7 +497,7 @@ function fmtSignalPct(v){return (v>0?'+':'')+(v*100).toFixed(2)+'%'}
 function signalRowHtml(r){
  const cls=r.signal==='AL'?'signal-buy':r.signal==='SAT'?'signal-sell':'signal-neutral',width=Math.min(100,Math.abs(r.score)/5.5*100),fallback=safe(String(r.symbol||'?').slice(0,3).toUpperCase());
  const icon=r.image?'<img class="signal-coin" loading="lazy" src="'+safe(r.image)+'" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="signal-coin signal-coin-fallback" style="display:none">'+fallback+'</span>':'<span class="signal-coin signal-coin-fallback">'+fallback+'</span>';
- return '<div class="signal-row"><div><div class="signal-main">'+icon+'<div style="min-width:0"><div class="signal-name">'+safe(r.name)+' <span class="signal-meta">'+safe(r.symbol)+'</span></div><div class="signal-meta">'+price(r.price)+' · Skor '+(r.score>0?'+':'')+r.score.toFixed(1)+' · Eşik '+r.threshold.toFixed(1)+'</div></div></div><div class="signal-meter"><span style="width:'+width+'%;background:'+(r.score>=0?'#21d6b0':'#f6465d')+'"></span></div><div class="signal-details">RSI '+r.rsi.toFixed(0)+' · Eğitim '+r.trainTrades+' işlem · Test '+r.test.trades+' işlem · Test getirisi '+(r.test.trades?fmtSignalPct(r.test.net):'yetersiz veri')+' · Kazanma '+(r.test.trades?(r.test.winRate*100).toFixed(0)+'%':'—')+'</div></div><div class="signal-side"><span class="signal-badge '+cls+'">'+r.signal+'</span><div class="signal-price">'+(r.change>0?'+':'')+r.change.toFixed(2)+'% / 24s</div></div></div>'
+ return '<div class="signal-row"><div><div class="signal-main">'+icon+'<div style="min-width:0"><div class="signal-name">'+safe(r.name)+' <span class="signal-meta">'+safe(r.symbol)+'</span></div><div class="signal-meta">'+price(r.price)+' · Skor '+(r.score>0?'+':'')+r.score.toFixed(1)+' · Eşik '+r.threshold.toFixed(1)+'</div></div></div><div class="signal-meter"><span style="width:'+width+'%;background:'+(r.score>=0?'#21d6b0':'#f6465d')+'"></span></div><div class="signal-details">RSI '+r.rsi.toFixed(0)+' · Eğitim '+r.trainTrades+' işlem · Test '+r.test.trades+' işlem · Test neti (işlem getirileri toplamı) '+(r.test.trades?fmtSignalPct(r.test.net):'yetersiz veri')+' · Kazanma '+(r.test.trades?(r.test.winRate*100).toFixed(0)+'%':'—')+'</div></div><div class="signal-side"><span class="signal-badge '+cls+'">'+r.signal+'</span><div class="signal-price">'+(r.change>0?'+':'')+r.change.toFixed(2)+'% / 24s</div></div></div>'
 }
 async function loadSignalUniverse(){
  const minCap=250000000,byKey=new Map();
@@ -568,6 +568,45 @@ $('sortBtn').addEventListener('click',()=>{const keys=['market_cap_rank','market
 $('detailFavorite').addEventListener('click',()=>{if(selectedCoin)toggleFavorite(selectedCoin.id)});$('closeDetail').addEventListener('click',closeDetail);$('detailCloseBtn').addEventListener('click',closeDetail);$('detailBackdrop').addEventListener('click',e=>{if(e.target===$('detailBackdrop'))closeDetail()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail()});
 window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.data?.type==='vcrypto-back-to-market'){returnToMarket();return}if(e.data?.type!=='vcrypto-analysis-height')return;const frame=$('analysisFrame');if(frame)frame.style.height=Math.max(700,Number(e.data.height)||900)+'px'});window.addEventListener('online',refreshData);window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installBtn').style.display='grid'});window.addEventListener('appinstalled',()=>toast('VCrypto başarıyla yüklendi'));if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));refreshData();setInterval(refreshData,REFRESH_MS);
 </script>
+
+<style>
+/* v43: Al/Sat kartları ve yazıları iki kademe daha büyüt; test getirisi etiketini açıklığa kavuştur. */
+@media(max-width:600px), (hover:none) and (pointer:coarse){
+ #screen-signal{font-size:20px!important}
+ #screen-signal .screen-heading{margin-bottom:17px!important}
+ #screen-signal .eyebrow{font-size:19px!important}
+ #screen-signal .h1{font-size:46px!important;line-height:1.18!important}
+ #screen-signal .sub{font-size:24px!important;line-height:1.5!important}
+ #screen-signal .tag{font-size:18px!important;padding:11px 14px!important}
+ #screen-signal .signal-summary{gap:12px!important;margin:18px 0!important}
+ #screen-signal .signal-stat{padding:19px!important;border-radius:15px!important;min-height:88px}
+ #screen-signal .signal-stat span{font-size:18px!important}
+ #screen-signal .signal-stat strong{font-size:28px!important;margin-top:9px!important}
+ #screen-signal .signal-controls .sub{font-size:21px!important}
+ #screen-signal #signalTimeframe,#screen-signal .signal-refresh{font-size:21px!important;padding:16px 13px!important;min-height:56px!important}
+ #screen-signal>.panel{padding:22px!important;border-radius:18px!important;margin-bottom:14px!important}
+ #screen-signal .signal-row{gap:14px!important;padding:23px 0!important;min-height:120px}
+ #screen-signal .signal-coin{width:52px!important;height:52px!important;flex-basis:52px!important}
+ #screen-signal .signal-name{font-size:22px!important;line-height:1.4!important}
+ #screen-signal .signal-meta{font-size:18px!important;line-height:1.5!important}
+ #screen-signal .signal-badge{font-size:19px!important;padding:9px 12px!important}
+ #screen-signal .signal-price{font-size:21px!important;line-height:1.4!important}
+ #screen-signal .signal-meter{height:9px!important;margin-top:13px!important}
+ #screen-signal .signal-details{font-size:18px!important;line-height:1.7!important}
+ #screen-signal .section-title{font-size:24px!important}
+ #screen-signal .signal-footnote{font-size:18px!important;line-height:1.7!important}
+ #screen-signal .empty{font-size:19px!important;line-height:1.6!important}
+}
+@media(max-width:420px){
+ #screen-signal .h1{font-size:42px!important}
+ #screen-signal .signal-stat span{font-size:16px!important}
+ #screen-signal .signal-stat strong{font-size:25px!important}
+ #screen-signal .signal-name{font-size:20px!important}
+ #screen-signal .signal-meta{font-size:16px!important}
+ #screen-signal .signal-details{font-size:16px!important}
+}
+</style>
+
 </body>
 </html>
 <style>
