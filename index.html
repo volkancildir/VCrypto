@@ -451,30 +451,25 @@ async function getMarkets(){
     throw Error('CoinGecko boş veri döndürdü.');
   }catch(e){lastError=e}
   try{
-    const fallback=await getJson('https://api.coinpaprika.com/v1/tickers?quotes=USD');
-    if(!Array.isArray(fallback)||!fallback.length)throw Error('CoinPaprika boş veri döndürdü.');
-    const mapped=fallback.slice(0,250).map(c=>({
-      id:c.id,name:c.name,symbol:c.symbol,image:'https://static.coinpaprika.com/coin/'+c.id+'/logo.png',
-      current_price:Number(c.quotes?.USD?.price),market_cap:Number(c.quotes?.USD?.market_cap),
-      market_cap_rank:Number(c.rank),total_volume:Number(c.quotes?.USD?.volume_24h),
-      price_change_percentage_24h:Number(c.quotes?.USD?.percent_change_24h),ath:null
-    })).filter(c=>Number.isFinite(c.current_price));
-    if(mapped.length)return mapped;
-    throw Error('CoinPaprika geçerli fiyat döndürmedi.');
-  }catch(e){lastError=e}
-  try{
-    const bases=['https://data-api.binance.vision/api/v3/','https://api.binance.com/api/v3/'];
-    let tickers,baseUsed;
-    for(const base of bases){try{const response=await fetch(base+'ticker/24hr',{headers:{accept:'application/json'}});if(!response.ok)throw Error('HTTP '+response.status);tickers=await response.json();baseUsed=base;break}catch(e){lastError=e}}
-    if(!Array.isArray(tickers)||!tickers.length)throw lastError||Error('Binance fiyat listesi boş.');
-    const liquid=tickers.filter(t=>typeof t.symbol==='string'&&t.symbol.endsWith('USDT')&&!t.symbol.includes('_')&&Number(t.lastPrice)>0)
-      .sort((a,b)=>Number(b.quoteVolume||0)-Number(a.quoteVolume||0)).slice(0,250);
-    return liquid.map((t,i)=>{const symbol=t.symbol.slice(0,-4);return {
-      id:'binance-'+symbol.toLowerCase(),name:symbol,symbol,image:'',current_price:Number(t.lastPrice),
-      market_cap:null,market_cap_rank:i+1,total_volume:Number(t.quoteVolume||0),
-      price_change_percentage_24h:Number(t.priceChangePercent),ath:null
-    }});
-  }catch(e){throw Error('CoinGecko, CoinPaprika ve Binance veri kaynaklarına ulaşılamadı. Son hata: '+(e?.message||lastError?.message||'bağlantı hatası'))}
+    let tickers;
+    for(const base of ['https://data-api.binance.vision/api/v3/','https://api.binance.com/api/v3/']){
+      try{
+        const response=await fetch(base+'ticker/24hr',{headers:{accept:'application/json'}});
+        if(!response.ok)throw Error('HTTP '+response.status);
+        const data=await response.json();
+        if(!Array.isArray(data)||!data.length)throw Error('Binance boş veri döndürdü.');
+        tickers=data;break;
+      }catch(e){lastError=e}
+    }
+    if(!tickers)throw lastError||Error('Binance fiyat listesi alınamadı.');
+    return tickers.filter(t=>typeof t.symbol==='string'&&t.symbol.endsWith('USDT')&&!t.symbol.includes('_')&&Number(t.lastPrice)>0)
+      .sort((a,b)=>Number(b.quoteVolume||0)-Number(a.quoteVolume||0)).slice(0,250)
+      .map((t,i)=>{const symbol=t.symbol.slice(0,-4);return {
+        id:'binance-'+symbol.toLowerCase(),name:symbol,symbol,image:'',
+        current_price:Number(t.lastPrice),market_cap:null,market_cap_rank:i+1,
+        total_volume:Number(t.quoteVolume||0),price_change_percentage_24h:Number(t.priceChangePercent),ath:null
+      }});
+  }catch(e){throw Error('CoinGecko verisi alınamadı; Binance yedek kaynağı da başarısız oldu. '+(e?.message||lastError?.message||''))}
 }
 function coinMarkup(c){const change=Number(c.price_change_percentage_24h),img=c.image&&/^https:\/\//.test(c.image)?c.image:'',on=favorites.has(c.id);return '<div class="coin-row" role="button" tabindex="0" data-coin="'+safe(c.id)+'"><div class="coin-left">'+(img?'<img class="coin-icon" loading="lazy" src="'+safe(img)+'" alt="">':'<span class="coin-icon">'+safe((c.symbol||'?').slice(0,3).toUpperCase())+'</span>')+'<div style="min-width:0"><div class="coin-name"><span class="rank">'+(c.market_cap_rank||'—')+'</span> '+safe(c.name)+'</div><div class="coin-symbol">'+safe((c.symbol||'').toUpperCase())+'</div></div></div><div class="coin-price">'+price(c.current_price)+'<div class="coin-change '+(change>0?'':'down')+'" style="color:'+(change>0?'var(--green)':change<0?'var(--red)':'var(--muted)')+'">'+pct(c.price_change_percentage_24h)+'</div></div><div class="row-right"><button class="star '+(on?'on':'')+'" data-star="'+safe(c.id)+'" aria-label="'+(on?'Favorilerden çıkar':'Favorilere ekle')+'" title="'+(on?'Favorilerden çıkar':'Favorilere ekle')+'">'+(on?'★':'☆')+'</button></div></div>'}
 let marketScrollY=0;function openAnalysis(id){const c=coins.find(x=>x.id===id);if(!c)return;marketScrollY=window.scrollY;const q=new URLSearchParams({embed:'1',v:'47',symbol:c.symbol||'',name:c.name||c.symbol||'Coin',image:c.image||''});const frame=$('analysisFrame');frame.src='./analysis.html?'+q.toString();frame.dataset.loaded='1';document.body.classList.add('coin-detail-open');setScreen('analysis')}function returnToMarket(){document.body.classList.remove('coin-detail-open');setScreen('market');requestAnimationFrame(()=>window.scrollTo(0,marketScrollY))}
