@@ -412,7 +412,7 @@ function rsiArr(values,period=14){const out=Array(values.length).fill(null);if(v
 function smaArr(values,period){const out=Array(values.length).fill(null);let sum=0;for(let i=0;i<values.length;i++){sum+=values[i];if(i>=period)sum-=values[i-period];if(i>=period-1)out[i]=sum/period}return out}
 function buildSignalSeries(candles){
  const c=candles.map(x=>x.c),v=candles.map(x=>x.v),e20=emaArr(c,20),e50=emaArr(c,50),e200=emaArr(c,200),e12=emaArr(c,12),e26=emaArr(c,26),macd=e12.map((n,i)=>n==null||e26[i]==null?null:n-e26[i]),macdSignal=emaArr(macd.map(n=>n==null?0:n),9),rsi=rsiArr(c),mid=smaArr(c,20),vol=smaArr(v,20),scores=Array(c.length).fill(null);
- for(let i=200;i<c.length;i++){if([e20[i],e50[i],e200[i],macd[i],macdSignal[i],rsi[i],mid[i],vol[i]].some(n=>n==null||!Number.isFinite(n)))continue;let s=0;s+=(e20[i]>e50[i]?1.2:-1.2);s+=(c[i]>e200[i]?1.2:-1.2);s+=(macd[i]>macdSignal[i]?1:-1);if(rsi[i]>=52&&rsi[i]<=68)s+=.7;else if(rsi[i]<48)s-=.7;else if(rsi[i]>72)s-=.4;s+=(c[i]>mid[i]?.5:-.5);if(vol[i]>0&&v[i]>vol[i]*1.3)s+=(c[i]>c[i-1]?.5:-.5);scores[i]=s}
+ for(let i=200;i<c.length;i++){if([e20[i],e50[i],e200[i],macd[i],macdSignal[i],rsi[i],mid[i],vol[i]].some(n=>n==null||!Number.isFinite(n)))continue;let s=0;s+=(e20[i]>e50[i]?1.2:-1.2);s+=(c[i]>e200[i]?1.2:-1.2);s+=(macd[i]>macdSignal[i]?1:-1);if(rsi[i]>=52&&rsi[i]<=68)s+=.7;else if(rsi[i]<48)s-=.7;else if(rsi[i]>72)s-=.4;s+=(c[i]>mid[i] ? .5 : -.5);if(vol[i]>0&&v[i]>vol[i]*1.3)s+=(c[i]>c[i-1] ? .5 : -.5);scores[i]=s}
  return {scores,c,e20,e50,e200,rsi,macd,macdSignal,mid}
 }
 function simulateSignal(scores,closes,threshold,start,end){
@@ -444,8 +444,8 @@ async function runSignalScan(force=false){
   if(!universe.length)throw Error('Önce Piyasa sayfasındaki canlı coin listesinin yüklenmesini bekle.');
   const results=new Array(universe.length);let next=0;
   async function worker(){while(next<universe.length){const idx=next++,coin=universe[idx],sym=String(coin.symbol).toUpperCase();try{
-   const response=await fetch('https://api.binance.com/api/v3/klines?symbol='+encodeURIComponent(sym+'USDT')+'&interval=4h&limit=300',{headers:{accept:'application/json'}});
-   if(!response.ok)throw Error('pair unavailable');const raw=await response.json();if(!Array.isArray(raw)||raw.length<230)throw Error('insufficient candles');
+   const response=await fetch('https://api.binance.com/api/v3/klines?symbol='+encodeURIComponent(sym+'USDT')+'&interval=4h&limit=500',{headers:{accept:'application/json'}});
+   if(!response.ok)throw Error('pair unavailable');const raw=await response.json();if(!Array.isArray(raw)||raw.length<400)throw Error('insufficient candles');
    const candles=raw.map(k=>({t:Number(k[0]),o:Number(k[1]),h:Number(k[2]),l:Number(k[3]),c:Number(k[4]),v:Number(k[5])})).filter(k=>[k.o,k.h,k.l,k.c,k.v].every(Number.isFinite));
    const series=buildSignalSeries(candles),opt=optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)throw Error('indicator unavailable');
    const validated=opt.test.trades>=3&&opt.test.net>0,signal=score>=opt.threshold&&validated?'AL':score<=-opt.threshold?'SAT':'NÖTR';
