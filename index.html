@@ -379,3 +379,9 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin||e.data?.typ
 </script>
 </body>
 </html>
+<style>
+/* Force the three primary tabs to remain visible in mobile/PWA layouts. */
+.bottom-nav{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;visibility:visible!important;opacity:1!important;z-index:9999!important}
+.bottom-nav .nav-item{display:flex!important;visibility:visible!important;opacity:1!important;min-width:0!important}
+.bottom-nav .nav-item[data-screen="analysis"]{display:flex!important;visibility:visible!important;opacity:1!important}
+</style>
