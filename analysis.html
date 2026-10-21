@@ -156,6 +156,19 @@ body.embedded .app{width:100%!important;max-width:none!important;margin:0!import
 body.embedded{width:100%!important;max-width:100%!important;overflow-x:hidden!important}
 
 </style>
+
+<style>
+/* Disable multi-touch pinch zoom while preserving normal one-finger scrolling. */
+html,body{touch-action:pan-x pan-y;}
+</style>
+<script>
+(function(){
+  const blockMultiTouch = function(event){ if(event.touches && event.touches.length > 1) event.preventDefault(); };
+  document.addEventListener('touchstart', blockMultiTouch, {passive:false,capture:true});
+  document.addEventListener('touchmove', blockMultiTouch, {passive:false,capture:true});
+  ['gesturestart','gesturechange','gestureend'].forEach(function(type){document.addEventListener(type,function(event){event.preventDefault();},{passive:false,capture:true});});
+})();
+</script>
 </head>
 <body>
 <div class="app">
