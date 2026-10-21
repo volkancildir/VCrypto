@@ -534,33 +534,74 @@ function linearSlope(values){
  return den?num/den:0
 }
 function detectChartPattern(candles){
- const n=candles.length;if(n<35)return null;
- const c=candles.map(x=>x.c),h=candles.map(x=>x.h),l=candles.map(x=>x.l),v=candles.map(x=>x.v),end=n-1,window=30,start=n-window;
- const highs=h.slice(start,end),lows=l.slice(start,end),close=c[end];
- if(highs.length<25)return null;
- const hs=linearSlope(highs),ls=linearSlope(lows),height=Math.max(...highs)-Math.min(...lows);
- const avgVol=v.slice(Math.max(0,end-20),end).reduce((a,b)=>a+b,0)/Math.max(1,v.slice(Math.max(0,end-20),end).length);
- const volConfirm=avgVol>0&&v[end]>=avgVol*1.05;
- // Descending highs + rising lows form a converging triangle; only count a breakout beyond the projected edge.
- if(hs<0&&ls>0&&height>0){
-  const upperEdge=highs[0]+hs*(highs.length-1),lowerEdge=lows[0]+ls*(lows.length-1);
-  if(close>upperEdge&&volConfirm){const d=close-upperEdge;return {name:'Simetrik üçgen yukarı kırılımı',direction:1,breakout:close,targets:[close+height,close+height*1.5,close+height*2],stop:upperEdge-d*.5,confidence:'Hacim teyitli kırılım'}}
-  if(close<lowerEdge&&volConfirm){return {name:'Simetrik üçgen aşağı kırılımı',direction:-1,breakout:close,targets:[close-height,close-height*1.5,close-height*2],stop:lowerEdge+height*.15,confidence:'Hacim teyitli kırılım'}}
+ const n=candles.length;if(n<45)return null;
+ const c=candles.map(x=>x.c),h=candles.map(x=>x.h),l=candles.map(x=>x.l),v=candles.map(x=>x.v),end=n-1,window=40,start=n-window,close=c[end];
+ const hh=h.slice(start,end),ll=l.slice(start,end),cc=c.slice(start,end),vv=v.slice(start,end);
+ if(hh.length<35)return null;
+ const max=(a)=>Math.max(...a),min=(a)=>Math.min(...a),mean=(a)=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
+ const slope=(a)=>linearSlope(a),range=max(hh)-min(ll),avgVol=mean(vv.slice(-20)),volConfirm=avgVol>0&&v[end]>=avgVol*1.05;
+ if(!(range>0))return null;
+ const results=[];
+ const add=(name,direction,targets,stop,confidence,priority=1)=>results.push({name,direction,breakout:close,targets,stop,confidence,priority});
+ // Triangles: use converging regression edges and require a close outside the edge plus volume.
+ const hs=slope(hh),ls=slope(ll),upper=hh[0]+hs*(hh.length-1),lower=ll[0]+ls*(ll.length-1);
+ if(hs<0&&ls>0){
+  if(close>upper&&volConfirm)add('Simetrik üçgen yukarı kırılımı',1,[close+range,close+range*1.5,close+range*2],upper-range*.08,'Hacim teyitli kırılım',5);
+  if(close<lower&&volConfirm)add('Simetrik üçgen aşağı kırılımı',-1,[close-range,close-range*1.5,close-range*2],lower+range*.08,'Hacim teyitli kırılım',5);
  }
- // Double bottom/top: two comparable extremes separated by a neckline; target = pattern height projected from breakout.
- const half=Math.floor(window/2),firstH=h.slice(start,start+half),secondH=h.slice(start+half,end),firstL=l.slice(start,start+half),secondL=l.slice(start+half,end);
- const top1=Math.max(...firstH),top2=Math.max(...secondH),bottom1=Math.min(...firstL),bottom2=Math.min(...secondL);
- const topTol=Math.max(top1,top2)*.012,bottomTol=Math.max(bottom1,bottom2)*.012;
- const necklineLow=Math.min(...l.slice(start,end)),necklineHigh=Math.max(...h.slice(start,end));
- if(Math.abs(top1-top2)<=topTol&&close<Math.min(top1,top2)*.995&&c[end-1]>=close&&volConfirm){
-  const neck=Math.min(...l.slice(start+5,end)),heightTop=Math.max(top1,top2)-neck;
-  if(heightTop>0&&close<neck)return {name:'Çift tepe aşağı kırılımı',direction:-1,breakout:close,targets:[close-heightTop,close-heightTop*1.5,close-heightTop*2],stop:Math.max(top1,top2),confidence:'Boyun çizgisi aşağı kırıldı'}
+ // Horizontal resistance/support breakouts.
+ const resistance=max(hh.slice(8)),support=min(ll.slice(8)),recentRange=max(hh.slice(-12))-min(ll.slice(-12));
+ if(close>resistance&&volConfirm)add('Yatay direnç kırılımı',1,[close+recentRange,close+recentRange*1.5,close+recentRange*2],resistance-recentRange*.15,'Direnç üstü kapanış ve hacim',4);
+ if(close<support&&volConfirm)add('Yatay destek kırılımı',-1,[close-recentRange,close-recentRange*1.5,close-recentRange*2],support+recentRange*.15,'Destek altı kapanış ve hacim',4);
+ // Wedges: converging trendlines sloping in the same direction.
+ if(hs<0&&ls<0&&Math.abs(hs)>Math.abs(ls)&&close>upper&&volConfirm)add('Düşen takoz yukarı kırılımı',1,[close+range*.7,close+range,close+range*1.4],upper-range*.08,'Düşen takoz üst çizgisi kırıldı',4);
+ if(hs>0&&ls>0&&Math.abs(ls)>Math.abs(hs)&&close<lower&&volConfirm)add('Yükselen takoz aşağı kırılımı',-1,[close-range*.7,close-range,close-range*1.4],lower+range*.08,'Yükselen takoz alt çizgisi kırıldı',4);
+ // Flags: strong prior impulse, then a compact counter-trend consolidation and breakout.
+ const impulseStart=Math.max(0,end-25),impulse=c[end-10]/Math.max(c[impulseStart],1e-12)-1;
+ const flagH=h.slice(end-10,end),flagL=l.slice(end-10,end),flagHi=max(flagH),flagLo=min(flagL),flagRange=flagHi-flagLo;
+ const flagHs=slope(h.slice(end-10,end)),flagLs=slope(l.slice(end-10,end));
+ if(impulse>.08&&flagRange<Math.abs(c[end-10]-c[impulseStart])*.65&&flagHs<=0&&flagLs<=0&&close>flagHi&&volConfirm){
+  const move=Math.abs(c[end-10]-c[impulseStart]);add('Boğa bayrağı yukarı kırılımı',1,[close+move*.5,close+move*.75,close+move],flagLo,'Yükseliş impulsu ve bayrak kırılımı',5)
  }
- if(Math.abs(bottom1-bottom2)<=bottomTol&&close>Math.max(bottom1,bottom2)*1.005&&c[end-1]<=close&&volConfirm){
-  const neck=Math.max(...h.slice(start+5,end)),heightBottom=neck-Math.min(bottom1,bottom2);
-  if(heightBottom>0&&close>neck)return {name:'Çift dip yukarı kırılımı',direction:1,breakout:close,targets:[close+heightBottom,close+heightBottom*1.5,close+heightBottom*2],stop:Math.min(bottom1,bottom2),confidence:'Boyun çizgisi yukarı kırıldı'}
+ if(impulse<-.08&&flagRange<Math.abs(c[end-10]-c[impulseStart])*.65&&flagHs>=0&&flagLs>=0&&close<flagLo&&volConfirm){
+  const move=Math.abs(c[end-10]-c[impulseStart]);add('Ayı bayrağı aşağı kırılımı',-1,[close-move*.5,close-move*.75,close-move],flagHi,'Düşüş impulsu ve bayrak kırılımı',5)
  }
- return null
+ // Double top/bottom and head-and-shoulders use separated swing extremes and a neckline.
+ function pivots(arr,isHigh){
+  const out=[];for(let i=2;i<arr.length-2;i++){const x=arr[i],w=arr.slice(i-2,i+3);if(isHigh?x===max(w):x===min(w))out.push({i:i+start,p:x})}return out
+ }
+ const ph=pivots(h,true),pl=pivots(l,false);
+ const last3h=ph.slice(-3),last3l=pl.slice(-3);
+ if(last3h.length>=2){
+  const p1=last3h[last3h.length-2],p2=last3h[last3h.length-1],tol=Math.max(p1.p,p2.p)*.018;
+  if(p2.i-p1.i>=6&&Math.abs(p1.p-p2.p)<=tol){
+   const neck=min(l.slice(p1.i+2,p2.i+1)),height=Math.max(p1.p,p2.p)-neck;
+   if(height>0&&close<neck&&volConfirm)add('Çift tepe aşağı kırılımı',-1,[close-height,close-height*1.5,close-height*2],Math.max(p1.p,p2.p),'Boyun çizgisi aşağı kırıldı',5)
+  }
+ }
+ if(last3l.length>=2){
+  const p1=last3l[last3l.length-2],p2=last3l[last3l.length-1],tol=Math.max(p1.p,p2.p)*.018;
+  if(p2.i-p1.i>=6&&Math.abs(p1.p-p2.p)<=tol){
+   const neck=max(h.slice(p1.i+2,p2.i+1)),height=neck-Math.min(p1.p,p2.p);
+   if(height>0&&close>neck&&volConfirm)add('Çift dip yukarı kırılımı',1,[close+height,close+height*1.5,close+height*2],Math.min(p1.p,p2.p),'Boyun çizgisi yukarı kırıldı',5)
+  }
+ }
+ if(last3h.length>=3){
+  const [a,b,d]=last3h,shoulderTol=Math.max(a.p,d.p)*.035;
+  if(b.p>a.p&&b.p>d.p&&Math.abs(a.p-d.p)<=shoulderTol){
+   const neck=Math.min(min(l.slice(a.i,b.i+1)),min(l.slice(b.i,d.i+1))),height=b.p-neck;
+   if(height>0&&close<neck&&volConfirm)add('Omuz-baş-omuz aşağı kırılımı',-1,[close-height,close-height*1.5,close-height*2],b.p,'Boyun çizgisi aşağı kırıldı',6)
+  }
+ }
+ if(last3l.length>=3){
+  const [a,b,d]=last3l,shoulderTol=Math.max(a.p,d.p)*.035;
+  if(b.p<a.p&&b.p<d.p&&Math.abs(a.p-d.p)<=shoulderTol){
+   const neck=Math.max(max(h.slice(a.i,b.i+1)),max(h.slice(b.i,d.i+1))),height=neck-b.p;
+   if(height>0&&close>neck&&volConfirm)add('Ters omuz-baş-omuz yukarı kırılımı',1,[close+height,close+height*1.5,close+height*2],b.p,'Boyun çizgisi yukarı kırıldı',6)
+  }
+ }
+ if(!results.length)return null;
+ return results.sort((a,b)=>b.priority-a.priority)[0]
 }
 function fmtSignalPct(v){return (v>0?'+':'')+(v*100).toFixed(2)+'%'}
 function signalRowHtml(r){
