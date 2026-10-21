@@ -528,11 +528,45 @@ function optimizeSignal(series){
  const threshold=best?.threshold||2.5,test=simulateSignal(series.scores,series.c,threshold,Math.max(split,series.warmup||201),n);
  return {threshold,trainTrades:best?.train.trades||0,test,split}
 }
+function linearSlope(values){
+ const n=values.length;if(n<3)return 0;const xm=(n-1)/2,ym=values.reduce((a,b)=>a+b,0)/n;let num=0,den=0;
+ for(let i=0;i<n;i++){num+=(i-xm)*(values[i]-ym);den+=(i-xm)*(i-xm)}
+ return den?num/den:0
+}
+function detectChartPattern(candles){
+ const n=candles.length;if(n<35)return null;
+ const c=candles.map(x=>x.c),h=candles.map(x=>x.h),l=candles.map(x=>x.l),v=candles.map(x=>x.v),end=n-1,window=30,start=n-window;
+ const highs=h.slice(start,end),lows=l.slice(start,end),close=c[end];
+ if(highs.length<25)return null;
+ const hs=linearSlope(highs),ls=linearSlope(lows),height=Math.max(...highs)-Math.min(...lows);
+ const avgVol=v.slice(Math.max(0,end-20),end).reduce((a,b)=>a+b,0)/Math.max(1,v.slice(Math.max(0,end-20),end).length);
+ const volConfirm=avgVol>0&&v[end]>=avgVol*1.05;
+ // Descending highs + rising lows form a converging triangle; only count a breakout beyond the projected edge.
+ if(hs<0&&ls>0&&height>0){
+  const upperEdge=highs[0]+hs*(highs.length-1),lowerEdge=lows[0]+ls*(lows.length-1);
+  if(close>upperEdge&&volConfirm){const d=close-upperEdge;return {name:'Simetrik üçgen yukarı kırılımı',direction:1,breakout:close,targets:[close+height,close+height*1.5,close+height*2],stop:upperEdge-d*.5,confidence:'Hacim teyitli kırılım'}}
+  if(close<lowerEdge&&volConfirm){return {name:'Simetrik üçgen aşağı kırılımı',direction:-1,breakout:close,targets:[close-height,close-height*1.5,close-height*2],stop:lowerEdge+height*.15,confidence:'Hacim teyitli kırılım'}}
+ }
+ // Double bottom/top: two comparable extremes separated by a neckline; target = pattern height projected from breakout.
+ const half=Math.floor(window/2),firstH=h.slice(start,start+half),secondH=h.slice(start+half,end),firstL=l.slice(start,start+half),secondL=l.slice(start+half,end);
+ const top1=Math.max(...firstH),top2=Math.max(...secondH),bottom1=Math.min(...firstL),bottom2=Math.min(...secondL);
+ const topTol=Math.max(top1,top2)*.012,bottomTol=Math.max(bottom1,bottom2)*.012;
+ const necklineLow=Math.min(...l.slice(start,end)),necklineHigh=Math.max(...h.slice(start,end));
+ if(Math.abs(top1-top2)<=topTol&&close<Math.min(top1,top2)*.995&&c[end-1]>=close&&volConfirm){
+  const neck=Math.min(...l.slice(start+5,end)),heightTop=Math.max(top1,top2)-neck;
+  if(heightTop>0&&close<neck)return {name:'Çift tepe aşağı kırılımı',direction:-1,breakout:close,targets:[close-heightTop,close-heightTop*1.5,close-heightTop*2],stop:Math.max(top1,top2),confidence:'Boyun çizgisi aşağı kırıldı'}
+ }
+ if(Math.abs(bottom1-bottom2)<=bottomTol&&close>Math.max(bottom1,bottom2)*1.005&&c[end-1]<=close&&volConfirm){
+  const neck=Math.max(...h.slice(start+5,end)),heightBottom=neck-Math.min(bottom1,bottom2);
+  if(heightBottom>0&&close>neck)return {name:'Çift dip yukarı kırılımı',direction:1,breakout:close,targets:[close+heightBottom,close+heightBottom*1.5,close+heightBottom*2],stop:Math.min(bottom1,bottom2),confidence:'Boyun çizgisi yukarı kırıldı'}
+ }
+ return null
+}
 function fmtSignalPct(v){return (v>0?'+':'')+(v*100).toFixed(2)+'%'}
 function signalRowHtml(r){
  const cls=r.signal==='AL'?'signal-buy':r.signal==='SAT'?'signal-sell':'signal-neutral',width=Math.min(100,Math.abs(r.score)/5.5*100),fallback=safe(String(r.symbol||'?').slice(0,3).toUpperCase());
  const icon=r.image?'<img class="signal-coin" loading="lazy" src="'+safe(r.image)+'" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="signal-coin signal-coin-fallback" style="display:none">'+fallback+'</span>':'<span class="signal-coin signal-coin-fallback">'+fallback+'</span>';
- return '<div class="signal-row"><div><div class="signal-main">'+icon+'<div style="min-width:0"><div class="signal-name">'+safe(r.name)+' <span class="signal-meta">'+safe(r.symbol)+'</span></div><div class="signal-meta">Fiyat '+price(r.entryPrice)+' · '+(r.signal==='SAT'?'Düşüş hedefi ':'Yukarı hedef ') +price(r.targetPrice)+' · Stop '+price(r.stopPrice)+'</div></div></div><div class="signal-meter"><span style="width:'+width+'%;background:'+(r.signal==='AL'?'#21d6b0':r.signal==='SAT'?'#f6465d':'#9aa4b2')+'"></span></div><div class="signal-details">'+(r.signal==='SAT'?'Hedef düşüşü ':'Hedef potansiyeli ')+'<b>'+fmtSignalPct(r.targetReturn)+'</b> · Stop riski '+fmtSignalPct(-r.stopReturn)+' · Risk/getiri '+r.riskReward.toFixed(2)+'x · RSI '+r.rsi.toFixed(0)+' · '+(r.targetSource||'Teknik hedef')+'</div><div class="signal-details">Geçmiş test: '+(r.test.trades?fmtSignalPct(r.test.net):'yetersiz veri')+' · '+r.test.trades+' işlem · kazanma '+(r.test.trades?(r.test.winRate*100).toFixed(0)+'%':'—')+'</div></div><div class="signal-side"><span class="signal-badge '+cls+'">'+r.signal+'</span><div class="signal-price">'+(r.change>0?'+':'')+r.change.toFixed(2)+'% / 24s</div><div class="signal-price" style="color:'+(r.signal==='SAT'?'#f6465d':r.signal==='NÖTR'?'#9aa4b2':'#21d6b0')+'">'+(r.signal==='SAT'?'Düşüş hedefi ':'Hedef ')+fmtSignalPct(r.targetReturn)+'</div></div></div>'
+ return '<div class="signal-row"><div><div class="signal-main">'+icon+'<div style="min-width:0"><div class="signal-name">'+safe(r.name)+' <span class="signal-meta">'+safe(r.symbol)+'</span></div><div class="signal-meta">Fiyat '+price(r.entryPrice)+' · '+(r.signal==='SAT'?'Düşüş hedefi ':'Yukarı hedef ') +price(r.targetPrice)+' · Stop '+price(r.stopPrice)+'</div></div></div><div class="signal-meter"><span style="width:'+width+'%;background:'+(r.signal==='AL'?'#21d6b0':r.signal==='SAT'?'#f6465d':'#9aa4b2')+'"></span></div><div class="signal-details">'+(r.signal==='SAT'?'Hedef düşüşü ':'Hedef potansiyeli ')+'<b>'+fmtSignalPct(r.targetReturn)+'</b> · Stop riski '+fmtSignalPct(-r.stopReturn)+' · Risk/getiri '+r.riskReward.toFixed(2)+'x · RSI '+r.rsi.toFixed(0)+' · '+(r.targetSource||'Teknik hedef')+'</div><div class="signal-details">'+(r.pattern?('Formasyon: <b>'+safe(r.pattern.name)+'</b> · '+safe(r.pattern.confidence)):'Formasyon: doğrulanmış kırılım yok')+'</div>'+(r.pattern?'<div class="signal-details">Formasyon hedefleri: <b>H1 '+price(r.pattern.targets[0])+'</b> · <b>H2 '+price(r.pattern.targets[1])+'</b> · <b>H3 '+price(r.pattern.targets[2])+'</b> · Formasyon stop '+price(r.pattern.stop)+'</div>':'')+'<div class="signal-details">Geçmiş test: '+(r.test.trades?fmtSignalPct(r.test.net):'yetersiz veri')+' · '+r.test.trades+' işlem · kazanma '+(r.test.trades?(r.test.winRate*100).toFixed(0)+'%':'—')+'</div></div><div class="signal-side"><span class="signal-badge '+cls+'">'+r.signal+'</span><div class="signal-price">'+(r.change>0?'+':'')+r.change.toFixed(2)+'% / 24s</div><div class="signal-price" style="color:'+(r.signal==='SAT'?'#f6465d':r.signal==='NÖTR'?'#9aa4b2':'#21d6b0')+'">'+(r.signal==='SAT'?'Düşüş hedefi ':'Hedef ')+fmtSignalPct(r.targetReturn)+'</div></div></div>'
 }
 async function loadSignalUniverse(){
  const minCap=250000000,byKey=new Map();
@@ -587,15 +621,20 @@ async function runSignalScan(force=false){
    const candles=raw.map(k=>({t:Number(k[0]),o:Number(k[1]),h:Number(k[2]),l:Number(k[3]),c:Number(k[4]),v:Number(k[5])})).filter(k=>[k.o,k.h,k.l,k.c,k.v].every(Number.isFinite));
    const series=buildSignalSeries(candles),opt=optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)throw Error('indicator unavailable');
    const entryPrice=series.c[i];
+   const pattern=detectChartPattern(candles);
    const atrValues=[];for(let j=Math.max(1,candles.length-15);j<candles.length;j++){const k=candles[j],pc=series.c[j-1];atrValues.push(Math.max(k.h-k.l,Math.abs(k.h-pc),Math.abs(k.l-pc)))}const atr=atrValues.length?atrValues.reduce((a,b)=>a+b,0)/atrValues.length:entryPrice*.03;
    const validated=opt.test.trades>=3&&opt.test.net>0;
    const preliminarySignal=score<=-opt.threshold?'SAT':'NÖTR';
    const targetDirection=preliminarySignal==='SAT'?-1:1;
-   const targetPrice=entryPrice+targetDirection*2*atr;
-   const stopPrice=entryPrice-targetDirection*1.5*atr;
-   const targetReturn=targetPrice/entryPrice-1,stopReturn=stopPrice/entryPrice-1,riskReward=Math.abs(targetReturn)/Math.abs(stopReturn);
-   const signal=score>=opt.threshold&&validated&&targetReturn>0&&riskReward>=1.2?'AL':preliminarySignal==='SAT'?'SAT':'NÖTR';
-   results[idx]={name:coin.name,symbol:sym,image:coin.image,price:coin.current_price,entryPrice,targetPrice,stopPrice,targetReturn,stopReturn,riskReward,targetSource:'ATR(14) bazlı 2x hedef',change:Number(coin.price_change_percentage_24h)||0,score,rsi:series.rsi[i],threshold:opt.threshold,trainTrades:opt.trainTrades,test:opt.test,signal,validated};
+   let targetPrice=entryPrice+targetDirection*2*atr;
+   let stopPrice=entryPrice-targetDirection*1.5*atr;
+   let targetSource='ATR(14) bazlı 2x hedef';
+   if(pattern&&pattern.direction===targetDirection){targetPrice=pattern.targets[0];stopPrice=pattern.stop;targetSource=pattern.name+' · H1'}
+   const targetReturn=targetPrice/entryPrice-1,stopReturn=stopPrice/entryPrice-1,riskReward=Math.abs(targetReturn)/Math.max(Math.abs(stopReturn),1e-9);
+   let signal=score>=opt.threshold&&validated&&targetReturn>0&&riskReward>=1.2?'AL':preliminarySignal==='SAT'?'SAT':'NÖTR';
+   if(pattern&&pattern.direction===1&&score>=0&&validated)signal='AL';
+   if(pattern&&pattern.direction===-1&&score<=0)signal='SAT';
+   results[idx]={name:coin.name,symbol:sym,image:coin.image,price:coin.current_price,entryPrice,targetPrice,stopPrice,targetReturn,stopReturn,riskReward,targetSource,pattern,change:Number(coin.price_change_percentage_24h)||0,score,rsi:series.rsi[i],threshold:opt.threshold,trainTrades:opt.trainTrades,test:opt.test,signal,validated};
   }catch(e){results[idx]={name:coin.name,symbol:sym,image:coin.image,price:coin.current_price,change:Number(coin.price_change_percentage_24h)||0,signal:'ATLANDI',reason:'Binance USDT verisi yok veya yetersiz'}}}}
   await Promise.all(Array.from({length:4},worker));signalCache=results.filter(Boolean).sort((a,b)=>{const rank={AL:0,'NÖTR':1,SAT:2,ATLANDI:3};return (rank[a.signal]??4)-(rank[b.signal]??4)||(b.score||-99)-(a.score||-99)});
   $('signalRows').innerHTML=signalCache.map(r=>r.signal==='ATLANDI'?'<div class="signal-row"><div><div class="signal-name">'+safe(r.name)+' ('+safe(r.symbol)+')</div><div class="signal-meta">'+safe(r.reason)+'</div></div><span class="signal-badge signal-neutral">ATLANDI</span></div>':signalRowHtml(r)).join('')||'<div class="empty">Sinyal üretilemedi.</div>';
