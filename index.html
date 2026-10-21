@@ -428,7 +428,7 @@ const price=v=>{if(v==null||!Number.isFinite(Number(v)))return '—';const n=Num
 const pct=v=>v==null||!Number.isFinite(Number(v))?'—':(Number(v)>0?'+':'')+Number(v).toFixed(2)+'%';
 const safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(msg){const el=$('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),2600)}
-async function getJson(url){const r=await fetch(url,{headers:{accept:'application/json'}});if(!r.ok)throw Error(r.status===429?'CoinGecko istek limiti doldu. Biraz bekleyip yeniden dene.':'HTTP '+r.status);return r.json()}
+async function getJson(url){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),10000);try{const r=await fetch(url,{headers:{accept:'application/json'},signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error(r.status===429?'HTTP 429 istek limiti doldu':'HTTP '+r.status);return await r.json()}catch(e){if(e.name==='AbortError')throw Error('Veri isteği zaman aşımına uğradı');throw e}finally{clearTimeout(timer)}}
 async function getBinanceKlines(symbol,interval,limit=500){
  const query='?symbol='+encodeURIComponent(symbol)+'&interval='+encodeURIComponent(interval)+'&limit='+limit;
  let lastError;
