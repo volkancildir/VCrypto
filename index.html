@@ -439,18 +439,45 @@ function signalRowHtml(r){
  return '<div class="signal-row"><div><div class="signal-main">'+icon+'<div style="min-width:0"><div class="signal-name">'+safe(r.name)+' <span class="signal-meta">'+safe(r.symbol)+'</span></div><div class="signal-meta">'+price(r.price)+' · Skor '+(r.score>0?'+':'')+r.score.toFixed(1)+' · Eşik '+r.threshold.toFixed(1)+'</div></div></div><div class="signal-meter"><span style="width:'+width+'%;background:'+(r.score>=0?'#21d6b0':'#f6465d')+'"></span></div><div class="signal-details">RSI '+r.rsi.toFixed(0)+' · Eğitim '+r.trainTrades+' işlem · Test '+r.test.trades+' işlem · Test getirisi '+(r.test.trades?fmtSignalPct(r.test.net):'yetersiz veri')+' · Kazanma '+(r.test.trades?(r.test.winRate*100).toFixed(0)+'%':'—')+'</div></div><div class="signal-side"><span class="signal-badge '+cls+'">'+r.signal+'</span><div class="signal-price">'+(r.change>0?'+':'')+r.change.toFixed(2)+'% / 24s</div></div></div>'
 }
 async function loadSignalUniverse(){
- const minCap=250000000,byId=new Map();
- // Reuse the already-loaded market data first; paginate the full CoinGecko market-cap ranking until below the threshold.
- coins.forEach(c=>{if(Number(c.market_cap)>=minCap&&c.id)byId.set(c.id,c)});
- let reachedThreshold=false;
+ const minCap=250000000,byKey=new Map();
+ const excluded=c=>!c.symbol||SIGNAL_EXCLUDE.has(String(c.symbol).toUpperCase())||!/^[A-Z0-9]{2,15}$/.test(String(c.symbol).toUpperCase());
+ const add=c=>{
+  const cap=Number(c.market_cap),sym=String(c.symbol||'').toUpperCase();
+  if(!c||!c.id||!Number.isFinite(cap)||cap<minCap||excluded(c))return;
+  const key=String(c.id).toLowerCase();
+  const previous=byKey.get(key);
+  if(!previous||cap>Number(previous.market_cap))byKey.set(key,{...previous,...c,market_cap:cap,symbol:sym});
+ };
+ // Start with all loaded market data, then retrieve the full market-cap universe from CoinPaprika.
+ coins.forEach(add);
+ let paprikaLoaded=false;
+ try{
+  const paprika=await getJson('https://api.coinpaprika.com/v1/tickers?quotes=USD');
+  if(Array.isArray(paprika)&&paprika.length){
+   paprika.forEach(c=>add({
+    id:'paprika:'+c.id,name:c.name,symbol:c.symbol,
+    image:'https://static.coinpaprika.com/coin/'+c.id+'/logo.png',
+    current_price:Number(c.quotes?.USD?.price),market_cap:Number(c.quotes?.USD?.market_cap),
+    market_cap_rank:Number(c.rank),total_volume:Number(c.quotes?.USD?.volume_24h),
+    price_change_percentage_24h:Number(c.quotes?.USD?.percent_change_24h),ath:null
+   }));
+   paprikaLoaded=true;
+  }
+ }catch(e){}
+ // CoinGecko pagination supplements the universe and avoids depending on its first page / top-20 list.
+ let cgPages=0,cgReachedCutoff=false;
  for(let page=1;page<=10;page++){
-  const batch=await getJson(API+'/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page='+page+'&sparkline=false&price_change_percentage=24h');
-  if(!Array.isArray(batch)||!batch.length){reachedThreshold=true;break}
-  for(const c of batch){if(Number(c.market_cap)>=minCap&&c.id)byId.set(c.id,c)}
-  if(Number(batch[batch.length-1]?.market_cap)<minCap){reachedThreshold=true;break}
+  try{
+   const batch=await getJson(API+'/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page='+page+'&sparkline=false&price_change_percentage=24h');
+   if(!Array.isArray(batch)||!batch.length){cgReachedCutoff=true;break}
+   batch.forEach(add);cgPages++;
+   if(Number(batch[batch.length-1]?.market_cap)<minCap){cgReachedCutoff=true;break}
+  }catch(e){break}
  }
- if(!reachedThreshold)throw Error('250 milyon $ üzerindeki coin listesi tam doğrulanamadı. Biraz sonra tekrar tara.');
- return Array.from(byId.values()).filter(c=>Number(c.market_cap)>=minCap&&c.symbol&&!SIGNAL_EXCLUDE.has(String(c.symbol).toUpperCase())&&/^[A-Z0-9]{2,15}$/.test(String(c.symbol).toUpperCase())).sort((a,b)=>(a.market_cap_rank||999999)-(b.market_cap_rank||999999));
+ if(!paprikaLoaded&&!cgPages)throw Error('CoinGecko ve CoinPaprika piyasa listelerine ulaşılamadı. Yeniden dene.');
+ const result=Array.from(byKey.values()).sort((a,b)=>(Number(a.market_cap_rank)||999999)-(Number(b.market_cap_rank)||999999));
+ if(!result.length)throw Error('Piyasa değeri 250 milyon $ üzerinde coin bulunamadı.');
+ return result;
 }
 async function runSignalScan(force=false){
  if(signalBusy)return;signalBusy=true;$('signalRefresh').disabled=true;$('signalStatus').textContent='Taranıyor';$('signalError').style.display='none';$('signalRows').innerHTML='<div class="empty">250 milyon $ üzerindeki coinler bulunuyor; Binance mumları alınıyor ve eşikler geçmiş veride test ediliyor…</div>';
