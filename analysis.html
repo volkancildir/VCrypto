@@ -378,7 +378,7 @@ $('openPatternBtn').addEventListener('click',()=>{const q=new URLSearchParams({s
       const visible=Math.min(klines.length,Math.max(20,Math.round((views[view]||views['4h']).limit/chartZoom)));
       const step=Math.max(1,canvas.clientWidth/visible);
       const maxOffset=Math.max(0,klines.length-visible);
-      const next=Math.max(0,Math.min(maxOffset,dragOffset+Math.round((dragX-e.touches[0].clientX)/step)));
+      const next=Math.max(0,Math.min(maxOffset,dragOffset+Math.round((e.touches[0].clientX-dragX)/step)));
       if(next!==lastDragOffset){chartOffset=next;lastDragOffset=next;redrawCharts();}
     }
   },{passive:false});
