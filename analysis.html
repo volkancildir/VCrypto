@@ -240,7 +240,7 @@ html,body{touch-action:pan-x pan-y;}
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-const params=new URLSearchParams(location.search);if(params.get('embed')==='1')document.body.classList.add('embedded');
+const params=new URLSearchParams(location.search);if(params.get('embed')==='1'){document.body.classList.add('embedded');history.pushState({vcryptoEmbeddedGuard:true},'',location.href);window.addEventListener('popstate',()=>{if(window.parent!==window)window.parent.postMessage({type:'vcrypto-back-to-market'},location.origin)})}
 let symbol=(params.get('symbol')||params.get('coin')||'BTC').toUpperCase().replace(/[^A-Z0-9]/g,'');
 let coinName=params.get('name')||symbol;
 let view='4h',interval='4h',klines=[],ticker=null,resizeTimer,miniSeries={},chartZoom=1,chartOffset=0;
