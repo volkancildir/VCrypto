@@ -424,7 +424,7 @@ html,body{touch-action:pan-x pan-y;}
 <script>
 'use strict';
 const API='https://api.coingecko.com/api/v3',REFRESH_MS=120000;
-let coins=[],globalData={},busy=false,activeScreen='market',activeFilter='all',sortKey='market_cap',sortDirection=1,selectedCoin=null,installPrompt=null;
+let coins=[],globalData={},busy=false,activeScreen='market',activeFilter='all',sortKey='market_cap',sortDirection=-1,selectedCoin=null,installPrompt=null;
 const $=id=>document.getElementById(id);
 const favorites=new Set(readFavorites());
 function readFavorites(){try{return JSON.parse(localStorage.getItem('vcrypto-favorites')||'[]')}catch(e){return []}}
