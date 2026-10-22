@@ -359,7 +359,7 @@ $('openPatternBtn').addEventListener('click',()=>{const q=new URLSearchParams({s
   },{passive:false});
   canvas.addEventListener('touchmove',function(e){
     if(e.touches.length===2&&startDistance>0){
-      e.preventDefault();const d=distance(e.touches),next=Math.max(0.5,Math.min(6,startZoom*(d/startDistance)));
+      e.preventDefault();const d=distance(e.touches),next=Math.max(0.125,Math.min(6,startZoom*(d/startDistance)));
       if(Math.abs(next-chartZoom)>0.06&&Date.now()-lastApply>35){chartZoom=next;lastApply=Date.now();redrawCharts();}
     }else if(e.touches.length===1&&dragX!==null){
       e.preventDefault();
