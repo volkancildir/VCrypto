@@ -24,7 +24,7 @@
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
 const symbol=(params.get('symbol')||params.get('coin')||'BTC').toUpperCase().replace(/[^A-Z0-9]/g,'');
 const coinName=params.get('name')||symbol;
-const views={'4h':{interval:'5m',limit:48,label:'Son 4 saat · 5 dakikalık mumlar',future:12},'1d':{interval:'15m',limit:96,label:'Son 1 gün · 15 dakikalık mumlar',future:16},'1w':{interval:'1h',limit:168,label:'Son 1 hafta · saatlik mumlar',future:18},'1m':{interval:'4h',limit:180,label:'Son 1 ay · 4 saatlik mumlar',future:18},'1y':{interval:'1w',limit:52,label:'Son 1 yıl · haftalık mumlar',future:12},'5y':{interval:'1M',limit:60,label:'Son 5 yıl · aylık mumlar',future:8}};
+const views={'4h':{interval:'5m',limit:48,label:'Son 4 saat · 5 dakikalık mumlar',future:12},'1d':{interval:'15m',limit:96,label:'Son 1 gün · 15 dakikalık mumlar',future:16},'1w':{interval:'1h',limit:168,label:'Son 1 hafta · saatlik mumlar',future:18},'1m':{interval:'1d',limit:30,label:'Son 1 ay · günlük mumlar',future:10},'1y':{interval:'1w',limit:52,label:'Son 1 yıl · haftalık mumlar',future:12},'5y':{interval:'1M',limit:60,label:'Son 5 yıl · aylık mumlar',future:8}};
 let view=views[params.get('view')]?params.get('view'):'4h',candles=[],resizeTimer;
 const fmt=v=>!Number.isFinite(v)?'—':'$'+v.toLocaleString('en-US',{maximumFractionDigits:v<1?7:2,minimumFractionDigits:v<1?4:2});
 async function getJson(url){let last;for(const host of ['https://api.binance.com/api/v3/','https://data-api.binance.vision/api/v3/'])try{const r=await fetch(host+url);if(!r.ok)throw Error('HTTP '+r.status);return await r.json()}catch(e){last=e}throw last||Error('Veri alınamadı')}
