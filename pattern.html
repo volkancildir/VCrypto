@@ -43,7 +43,7 @@ function setupChartGestures(){
  });
  canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pointers.size===2){const p=[...pointers.values()],dist=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);if(pinchStartDistance>0)chartZoom=Math.max(1,Math.min(4,pinchStartZoom*dist/pinchStartDistance));}
-  else if(pointers.size===1&&dragStartX!==null){const cfg=views[view],count=Math.max(10,Math.round(cfg.limit/chartZoom)),step=canvas.clientWidth/(count+cfg.future);chartPan=Math.max(0,Math.min(Math.max(0,candles.length-count),dragStartPan+Math.round((dragStartX-e.clientX)/Math.max(1,step))));}
+  else if(pointers.size===1&&dragStartX!==null){const cfg=views[view],count=Math.max(10,Math.round(cfg.limit/chartZoom)),step=canvas.clientWidth/(count+cfg.future);chartPan=Math.max(0,Math.min(Math.max(0,candles.length-count),dragStartPan+Math.round((e.clientX-dragStartX)/Math.max(1,step))));}
   if(candles.length)draw(candles,analyze(candles));if(e.pointerType!=='touch')showReadoutAt(e.clientX);
  });
  function end(e){pointers.delete(e.pointerId);if(pointers.size===0){dragStartX=null;pinchStartDistance=0}else if(pointers.size===1){const p=[...pointers.values()][0];dragStartX=p.x;dragStartPan=chartPan;pinchStartDistance=0}}
