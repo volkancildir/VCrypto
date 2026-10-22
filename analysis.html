@@ -283,7 +283,7 @@ function setupCandleReadout(){
   out.innerHTML='<strong>'+startDate.toLocaleString('tr-TR',opts)+' UTC başlangıç</strong> · '+endDate.toLocaleString('tr-TR',opts)+' UTC bitiş<br>Açılış: '+fmtPrice(k.o)+' · Yüksek: '+fmtPrice(k.h)+' · Düşük: '+fmtPrice(k.l)+' · Kapanış: '+fmtPrice(k.c);
   line.style.display='block';line.style.left=Math.max(0,Math.min(w-1,pad.l+(idx+.5)*step))+'px';
  }
- canvas.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||e.pointerType==='pen')show(e.clientX)});
+ canvas.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'||e.pointerType==='pen')show(e.clientX)});\n canvas.addEventListener('touchstart',e=>{if(e.touches.length===1)show(e.touches[0].clientX)},{passive:true});
  canvas.addEventListener('pointerleave',()=>{line.style.display='none'});
  canvas.addEventListener('click',e=>show(e.clientX));
 }
