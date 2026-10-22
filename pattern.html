@@ -45,7 +45,7 @@ function setupChartGestures(){
  },{passive:false});
  canvas.addEventListener('touchmove',e=>{
   if(e.touches.length===2&&pinchDistance>0){
-   e.preventDefault();const next=Math.max(.5,Math.min(4,pinchZoom*distance(e.touches)/pinchDistance));
+   e.preventDefault();const next=Math.max(.125,Math.min(4,pinchZoom*distance(e.touches)/pinchDistance));
    if(Math.abs(next-chartZoom)>.015&&Date.now()-lastApply>20){chartZoom=next;lastApply=Date.now();if(candles.length)draw(candles,analyze(candles))}
   }else if(e.touches.length===1&&dragX!==null){
    e.preventDefault();const cfg=views[view],count=Math.max(10,Math.min(candles.length,Math.round(cfg.limit/chartZoom))),step=Math.max(1,canvas.clientWidth/(count+cfg.future)),maxPan=Math.max(0,candles.length-count),next=Math.max(0,Math.min(maxPan,dragPan+Math.round((e.touches[0].clientX-dragX)/step)));
@@ -54,7 +54,7 @@ function setupChartGestures(){
  },{passive:false});
  function end(e){if(!e.touches||e.touches.length<2)pinchDistance=0;if(!e.touches||e.touches.length===0)dragX=null;else if(e.touches.length===1){dragX=e.touches[0].clientX;dragPan=chartPan;lastPan=chartPan}}
  canvas.addEventListener('touchend',end,{passive:true});canvas.addEventListener('touchcancel',end,{passive:true});
- canvas.addEventListener('wheel',e=>{e.preventDefault();chartZoom=Math.max(.5,Math.min(4,chartZoom*(e.deltaY<0?1.15:.87)));if(candles.length)draw(candles,analyze(candles))},{passive:false});
+ canvas.addEventListener('wheel',e=>{e.preventDefault();chartZoom=Math.max(.125,Math.min(4,chartZoom*(e.deltaY<0?1.15:.87)));if(candles.length)draw(candles,analyze(candles))},{passive:false});
 }
 function showReadoutAt(clientX){const canvas=$('chart'),out=$('candleReadout'),line=$('crosshair');if(!candles.length)return;const rect=canvas.getBoundingClientRect(),px=clientX-rect.left,w=rect.width,cfg=views[view],visible=visibleCandles(),left=4,step=(w-70)/(visible.length+cfg.future);const idx=Math.max(0,Math.min(visible.length-1,Math.round((px-left)/step-.5))),k=visible[idx];if(!k)return;const durations={'1h':3600000,'4h':14400000,'1d':86400000,'1w':604800000,'1m':2592000000,'1y':604800000,'5y':2592000000},opts={year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'UTC'},start=new Date(k.t),end=new Date(k.t+(durations[view]||3600000));out.innerHTML='<strong>'+start.toLocaleString('tr-TR',opts)+' UTC başlangıç</strong> · '+end.toLocaleString('tr-TR',opts)+' UTC bitiş<br>Açılış: '+fmt(k.o)+' · Yüksek: '+fmt(k.h)+' · Düşük: '+fmt(k.l)+' · Kapanış: '+fmt(k.c);line.style.display='block';line.style.left=Math.max(0,Math.min(w-1,4+(idx+.5)*step))+'px';
 }
