@@ -145,7 +145,7 @@ main{padding-top:18px}.screen{display:none;animation:screenIn .2s ease both}.scr
 #screen-market .search{height:60px;padding:0 16px;gap:12px}
 #screen-market .search input{font-size:17px}
 .sort-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:-3px 2px 12px;color:var(--muted);font-size:12px}
-.sort-toolbar .text-btn{min-height:40px;padding:0 14px;border:1px solid var(--line);border-radius:11px;background:var(--panel);color:var(--teal);font-size:13px;font-weight:800;white-space:nowrap}
+.sort-toolbar select{min-height:44px;max-width:65%;padding:0 34px 0 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel);color:var(--teal);font-size:14px;font-weight:800}
 .coin-icon{display:grid!important;visibility:visible!important;opacity:1!important;width:48px!important;height:48px!important;flex:0 0 48px!important;object-fit:cover!important;border-radius:50%!important}
 :root{--bg:#08111f;--panel:#101d30;--panel2:#0c1728;--line:#21364d;--teal:#21d6b0;--gold:#21d6b0}
 html,body{background:#08111f!important}
@@ -399,7 +399,7 @@ html,body{touch-action:pan-x pan-y;}
 <div class="section-head"><div class="section-title" id="listTitle">Kripto Para Sıralaması</div></div>
 <div class="quick-filters" id="filters"><button class="filter active" data-filter="all">Tümü</button><button class="filter" data-filter="top10">İlk 10</button><button class="filter" data-filter="top50">İlk 50</button><button class="filter" data-filter="gainers">Yükselenler</button><button class="filter" data-filter="losers">Düşenler</button></div>
 <div class="search"><span aria-hidden="true">⌕</span><input id="searchInput" type="search" placeholder="Coin adı veya sembol ara…" aria-label="Coin adı veya sembol ara"><button class="text-btn" id="clearSearch" aria-label="Aramayı temizle">✕</button></div>
-<div class="sort-toolbar"><span>Sıralama ölçütü</span><button class="text-btn" id="sortBtn" type="button">Piyasa değeri ↕</button></div>
+<div class="sort-toolbar"><label for="sortSelect">Sıralama ölçütü</label><select id="sortSelect" aria-label="Coin sıralama ölçütü"><option value="market_cap" selected>Piyasa değeri</option><option value="market_cap_rank">Kripto para sıralaması</option><option value="current_price">Fiyat</option><option value="total_volume">24 saatlik hacim</option><option value="price_change_percentage_24h">24 saatlik değişim</option><option value="ath">Tüm zamanların zirvesi</option></select></div>
 <article class="panel"><div class="coin-list" id="coinRows"><div class="empty">Canlı piyasa verileri yükleniyor…</div></div><div class="bottomline"><span id="resultCount">Veriler bekleniyor</span><span id="updatedAt">Güncelleme bekleniyor</span></div></article>
 <div class="error" id="errorBox" role="alert"></div>
 <footer class="footer">Veri kaynağı: CoinGecko Public API<br>VCrypto yatırım tavsiyesi vermez. Piyasa verileri gecikmeli olabilir.</footer>
@@ -424,7 +424,7 @@ html,body{touch-action:pan-x pan-y;}
 <script>
 'use strict';
 const API='https://api.coingecko.com/api/v3',REFRESH_MS=120000;
-let coins=[],globalData={},busy=false,activeScreen='market',activeFilter='all',sortKey='market_cap_rank',sortDirection=1,selectedCoin=null,installPrompt=null;
+let coins=[],globalData={},busy=false,activeScreen='market',activeFilter='all',sortKey='market_cap',sortDirection=1,selectedCoin=null,installPrompt=null;
 const $=id=>document.getElementById(id);
 const favorites=new Set(readFavorites());
 function readFavorites(){try{return JSON.parse(localStorage.getItem('vcrypto-favorites')||'[]')}catch(e){return []}}
@@ -710,7 +710,7 @@ async function runSignalScan(force=false){
 document.querySelectorAll('.nav-item').forEach(btn=>btn.addEventListener('click',()=>setScreen(btn.dataset.screen)));document.querySelectorAll('.filter').forEach(btn=>btn.addEventListener('click',()=>setFilter(btn.dataset.filter)));
 $('signalRefresh').addEventListener('click',()=>runSignalScan(true));$('signalTimeframe').addEventListener('change',()=>{signalCache=[];runSignalScan(true)});$('searchInput').addEventListener('input',renderMarket);$('favoriteSearch').addEventListener('input',renderOtherLists);$('clearSearch').addEventListener('click',()=>{$('searchInput').value='';renderMarket();$('searchInput').focus()});
 $('refreshBtn').addEventListener('click',refreshData);$('installBtn').addEventListener('click',requestInstall);
-$('sortBtn').addEventListener('click',()=>{const keys=[['market_cap_rank','Piyasa sıralaması'],['market_cap','Piyasa değeri'],['current_price','Fiyat'],['total_volume','24s hacim'],['price_change_percentage_24h','24s değişim'],['ath','Tüm zamanların zirvesi']];const i=keys.findIndex(x=>x[0]===sortKey);const next=keys[(i+1)%keys.length];sortKey=next[0];sortDirection=1;const btn=$('sortBtn');btn.textContent=next[1]+' ↕';renderMarket();renderOtherLists();});
+$('sortSelect').value=sortKey;$('sortSelect').addEventListener('change',()=>{sortKey=$('sortSelect').value;sortDirection=1;renderMarket();renderOtherLists();});
 $('detailFavorite').addEventListener('click',()=>{if(selectedCoin)toggleFavorite(selectedCoin.id)});$('closeDetail').addEventListener('click',closeDetail);$('detailCloseBtn').addEventListener('click',closeDetail);$('detailBackdrop').addEventListener('click',e=>{if(e.target===$('detailBackdrop'))closeDetail()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail()});
 window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.data?.type==='vcrypto-back-to-market'){returnToMarket();return}if(e.data?.type!=='vcrypto-analysis-height')return;const frame=$('analysisFrame');if(frame)frame.style.height=Math.max(700,Number(e.data.height)||900)+'px'});window.addEventListener('online',refreshData);window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;$('installBtn').style.display='grid'});window.addEventListener('appinstalled',()=>toast('VCrypto başarıyla yüklendi'));if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));refreshData();setInterval(refreshData,REFRESH_MS);
 </script>
