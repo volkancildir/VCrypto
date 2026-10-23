@@ -11,6 +11,7 @@ function canonical(name){return String(name).replace(/\s*[·•].*$/,'').replace
 function run(data,{costBps=20,horizon=24,targetR=2,stopR=1,progress}={}){
  if(!window.VCryptoPatternEngine||!Array.isArray(data)||data.length<100)throw Error('Güvenilir ilk tarama için en az 100 mum gerekiyor.');
  const signals=[],minBars=60,lastSignal=data.length-horizon-2;
+ if(lastSignal<minBars+5)throw Error('Seçilen maksimum işlem süresi için yeterli mum yok. Daha kısa işlem süresi veya daha uzun geçmiş sağlayan bir zaman dilimi seç.');
  for(let i=minBars;i<=lastSignal;i++){
   if(progress&&i%50===0)progress(i,lastSignal);
   const history=data.slice(0,i+1),found=window.VCryptoPatternEngine.scan(history);
