@@ -546,7 +546,7 @@ function setScreen(name){activeScreen=name;try{localStorage.setItem('vcryptoActi
 let patternSearchTimer=null;
 function renderPatternSearch(){
  const q=($('patternSearch')?.value||'').trim().toLowerCase();
- const list=coins.filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q)).slice(0,30);
+ const list=coins.slice(0,100).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q));
  $('patternSearchRows').innerHTML=list.map(c=>'<button type="button" class="coin-row pattern-coin-row" data-pattern-id="'+safe(c.id)+'" style="width:100%;text-align:left;background:transparent;border-top:0;border-left:0;border-right:0;color:inherit"><span class="coin-left"><img class="coin-icon" src="'+safe(c.image||'./icon.svg')+'" alt="" onerror="this.src=\'./icon.svg\'"><span style="min-width:0"><span class="coin-name" style="display:block">'+safe(c.name)+'</span><span class="coin-symbol">'+safe(String(c.symbol||'').toUpperCase())+'</span></span></span><span style="color:var(--teal);font-size:22px;font-weight:900">›</span></button>').join('')||'<div class="empty">Coin bulunamadı.</div>';
  $('patternSearchRows').querySelectorAll('[data-pattern-id]').forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));
 }
