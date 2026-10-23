@@ -33,6 +33,28 @@
 .memory-empty{font-size:13px;color:var(--muted);padding:10px 2px}
 #memoryRows{display:grid;gap:8px;margin-top:10px}
 
+
+/* Historical backtest panel */
+.bt-controls{display:flex;align-items:end;gap:9px;flex-wrap:wrap;margin-top:13px}
+.bt-field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:110px;color:var(--muted);font-size:12px}
+.bt-field input,.bt-field select{width:100%;background:#081522;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit;font-size:14px}
+.bt-run{border:1px solid #1b756b;background:#103a3a;color:var(--teal2);border-radius:10px;padding:11px 14px;font-weight:900}
+.bt-run:disabled{opacity:.55}
+.bt-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:12px}
+.bt-metric{background:#081522;border:1px solid var(--line);border-radius:10px;padding:10px;min-width:0}
+.bt-metric span{display:block;font-size:11px;color:var(--muted)}
+.bt-metric strong{display:block;margin-top:5px;font-size:16px;overflow-wrap:anywhere}
+.bt-split-note{font-size:12px;line-height:1.6;color:var(--muted);margin:12px 0}
+.bt-table-wrap{width:100%;overflow:auto;margin-top:10px;border:1px solid var(--line);border-radius:10px}
+.bt-table{width:100%;border-collapse:collapse;min-width:790px;font-size:12px}
+.bt-table th,.bt-table td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+.bt-table th{color:var(--teal2);background:#0a1726;position:sticky;top:0}
+.bt-table td small{display:block;color:var(--muted);font-size:10px;margin-top:3px}
+.bt-quality{display:inline-block;color:var(--gold);white-space:normal;max-width:130px}
+.bt-log{margin-top:12px;color:var(--teal2);font-size:14px}
+#backtestStatus{font-size:13px;color:var(--muted);margin-top:9px;line-height:1.6}
+@media(max-width:420px){.bt-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.bt-metric strong{font-size:14px}.bt-controls{align-items:stretch}}
+
 </style>
 </head>
 <body>
@@ -45,9 +67,14 @@
 
 <section class="panel"><div class="panel-title">Formasyon kütüphanesi</div><div class="panel-sub">Mum formasyonları, klasik grafik yapıları, piyasa yapısı, kırılım ve hacim/volatilite olayları ayrı ayrı taranır. Bunlar aday tespitleridir; başarı olasılığı olarak yorumlanmamalıdır.</div><div id="libraryResults" class="library-grid"><div class="memory-empty">Formasyonlar taranıyor…</div></div></section>
 <section class="panel"><div class="panel-title">Borsa hafızası</div><div class="panel-sub">Bu coin ve periyottaki geçmiş analizleri cihazında saklar; sonraki mumlarda hedef/stop seviyelerini izleyerek sonucu kaydeder.</div><div id="memoryStats" class="memory-stats">Hafıza hazırlanıyor…</div><div id="memoryState" class="panel-sub"></div><div id="memoryRows"><div class="memory-empty">Hafıza kayıtları yükleniyor…</div></div><div class="memory-actions"><button id="memoryExport" type="button">Hafızayı dışa aktar</button><button id="memoryClear" type="button">Hafızayı temizle</button></div><p class="warning">Hafıza yalnızca bu tarayıcı/cihazda tutulur; başka cihazlarla senkronize değildir. Geçmiş hedef/stop izleme, mum içi sıra bilinmediği için aynı mumda ikisi de görülürse sonucu belirsiz işaretler. Kayıtlar gerçek zamanlı borsa geçmişi veya doğrulanmış backtest yerine geçmez.</p></section>
+
+<section class="panel" id="backtestPanel"><div class="panel-title">Formasyon geçmiş testi</div><div class="panel-sub">Geçmiş mumlarda formasyon başına ayrı sonuçları hesaplar. Sinyal mumunun kapanışından sonra, sonraki mum açılışında giriş varsayılır. Sabit hedef 2 ATR, stop 1 ATR.</div>
+<div class="bt-controls"><label class="bt-field">Toplam işlem maliyeti (bps)<input id="btCost" type="number" min="0" max="300" step="1" value="20"></label><label class="bt-field">Maksimum işlem süresi (mum)<select id="btHorizon"><option value="12">12 mum</option><option value="24" selected>24 mum</option><option value="48">48 mum</option></select></label><button class="bt-run" id="btRun">Geçmiş testi çalıştır</button></div>
+<div id="backtestStatus">Test henüz çalıştırılmadı. Uzun zaman dilimlerinde yeterli geçmiş mum bulunmayabilir.</div><div id="backtestResults"></div></section>
 <section class="panel"><div class="panel-title">Nasıl yorumlanmalı?</div><p class="warning">Sarı çizgi bir kesin fiyat tahmini değil, tespit edilen formasyona ve mevcut volatiliteye dayalı senaryo çizimidir. Formasyon kırılımı gerçekleşmediyse sonuç teyitsizdir. Hedefler gerçekleşmeyebilir; kripto varlıklar yüksek risk taşır. Bu ekran yatırım tavsiyesi değildir.</p></section>
 </div>
 <script src="./pattern-engine.js"></script>
+<script src="./backtest-engine.js"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
@@ -240,7 +267,26 @@ function setupCandleReadout(){
 }
 
 async function load(){const cfg=views[view];$('error').style.display='none';$('chartSub').textContent=cfg.label+' · projeksiyon '+cfg.future+' mum';$('patternName').textContent='Hesaplanıyor…';try{const raw=await getJson('klines?symbol='+encodeURIComponent(symbol+'USDT')+'&interval='+cfg.interval+'&limit=200');candles=raw.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));if(candles.length<30)throw Error('Bu coin ve periyot için yeterli mum verisi yok.');const result=analyze(candles);const libraryPatterns=window.VCryptoPatternEngine.scan(candles);window.VCryptoPatternEngine.renderPatterns(libraryPatterns);const memory=window.VCryptoPatternEngine.updateMemory({symbol,view,candles,result,patterns:libraryPatterns});window.VCryptoPatternEngine.renderMemory(memory.items,memory.total,memory.saved);$('currentPrice').textContent=fmt(candles[candles.length-1].c);$('coinName').textContent=coinName+' ('+symbol+')';$('pair').textContent=symbol+'/USDT · Binance Spot';$('patternName').textContent=result.name;$('patternName').className='status '+(result.direction>0?'bull':result.direction<0?'bear':'neutral');$('patternText').textContent=result.reason;$('target1').textContent=fmt(result.target1);$('target2').textContent=fmt(result.target2);$('stop').textContent=fmt(result.stop);$('tags').innerHTML='<span class="pill">Yön: '+(result.direction>0?'Yukarı':'Aşağı')+'</span><span class="pill">Heuristik güven: %'+result.confidence+'</span><span class="pill">'+(result.neck?'Boyun çizgisi: '+fmt(result.neck):'Formasyon teyidi yok')+'</span>';draw(candles,result);setupCandleReadout();setupChartGestures()}catch(e){$('error').textContent=e.message||'Grafik verisi alınamadı.';$('error').style.display='block';$('patternName').textContent='Analiz yapılamadı';$('patternText').textContent='Coinin Binance USDT spot paritesi veya yeterli geçmiş verisi olmayabilir.'}}
-document.querySelectorAll('.tf').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.tf').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tf').forEach(x=>x.classList.toggle('active',x===b));view=b.dataset.view;chartZoom=1;chartPan=0;load()}));window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(candles.length){const r=analyze(candles);draw(candles,r)}},120)});if(params.get('embed')==='1'&&window.parent!==window){history.pushState({vcryptoPatternGuard:true},'',location.href);window.addEventListener('popstate',()=>{window.parent.postMessage({type:'vcrypto-back-to-pattern-search'},location.origin);history.pushState({vcryptoPatternGuard:true},'',location.href)})}function reportPatternHeight(){if(params.get('embed')==='1'&&window.parent!==window)window.parent.postMessage({type:'vcrypto-pattern-height',height:Math.ceil(document.documentElement.scrollHeight)},location.origin)}if('ResizeObserver'in window)new ResizeObserver(reportPatternHeight).observe(document.documentElement);window.addEventListener('load',reportPatternHeight);window.addEventListener('resize',reportPatternHeight);$('memoryExport').addEventListener('click',()=>window.VCryptoPatternEngine.exportMemory());$('memoryClear').addEventListener('click',()=>window.VCryptoPatternEngine.clearMemory());
+document.querySelectorAll('.tf').forEach(b=>b.classList.toggle('active',b.dataset.view===view));document.querySelectorAll('.tf').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tf').forEach(x=>x.classList.toggle('active',x===b));view=b.dataset.view;chartZoom=1;chartPan=0;load()}));window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(candles.length){const r=analyze(candles);draw(candles,r)}},120)});if(params.get('embed')==='1'&&window.parent!==window){history.pushState({vcryptoPatternGuard:true},'',location.href);window.addEventListener('popstate',()=>{window.parent.postMessage({type:'vcrypto-back-to-pattern-search'},location.origin);history.pushState({vcryptoPatternGuard:true},'',location.href)})}function reportPatternHeight(){if(params.get('embed')==='1'&&window.parent!==window)window.parent.postMessage({type:'vcrypto-pattern-height',height:Math.ceil(document.documentElement.scrollHeight)},location.origin)}if('ResizeObserver'in window)new ResizeObserver(reportPatternHeight).observe(document.documentElement);window.addEventListener('load',reportPatternHeight);window.addEventListener('resize',reportPatternHeight);
+async function fetchBacktestHistory(){
+ const cfg=views[view],pair=symbol+'USDT',latest=await getJson('klines?symbol='+encodeURIComponent(pair)+'&interval='+cfg.interval+'&limit=1000');
+ let raw=latest;
+ if(latest.length){const firstTime=Number(latest[0][0]);if(Number.isFinite(firstTime)&&firstTime>0){try{const older=await getJson('klines?symbol='+encodeURIComponent(pair)+'&interval='+cfg.interval+'&endTime='+(firstTime-1)+'&limit=1000');raw=older.concat(latest)}catch(_){raw=latest}}}
+ const unique=new Map();for(const x of raw)unique.set(+x[0],{t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]});
+ return [...unique.values()].sort((a,b)=>a.t-b.t).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite)).slice(-1500);
+}
+async function runBacktest(){
+ const btn=$('btRun'),status=$('backtestStatus');btn.disabled=true;btn.textContent='Test ediliyor…';status.textContent='Binance geçmiş mumları indiriliyor…';$('backtestResults').innerHTML='';
+ try{
+  const history=await fetchBacktestHistory();status.textContent=history.length+' mum alındı. Formasyon sinyalleri ve işlem sonuçları hesaplanıyor…';
+  const cost=Math.max(0,Math.min(300,Number($('btCost').value)||0)),horizon=Math.max(1,Math.min(100,Number($('btHorizon').value)||24));
+  const report=window.VCryptoBacktest.run(history,{costBps:cost,horizon,targetR:2,stopR:1,progress:(i,n)=>{status.textContent='Geçmiş test hesaplanıyor: '+Math.min(i,n)+' / '+n+' mum…'}});
+  window.VCryptoBacktest.render(report);status.textContent='Test tamamlandı · '+history.length+' mum · '+report.trades+' işlem · '+new Date(report.from).toLocaleDateString('tr-TR')+' – '+new Date(report.to).toLocaleDateString('tr-TR')+'.';
+ }catch(e){status.textContent='Test çalıştırılamadı: '+(e.message||'bilinmeyen hata')+' . Daha kısa/uzun başka bir periyot deneyebilirsin.'}
+ finally{btn.disabled=false;btn.textContent='Geçmiş testi çalıştır'}
+}
+
+$('memoryExport').addEventListener('click',()=>window.VCryptoPatternEngine.exportMemory());$('memoryClear').addEventListener('click',()=>window.VCryptoPatternEngine.clearMemory());$('btRun').addEventListener('click',runBacktest);
 $('backBtn').addEventListener('click',()=>{if(params.get('embed')==='1'&&window.parent!==window){window.parent.postMessage({type:'vcrypto-back-to-pattern-search'},location.origin)}else if(history.length>1)history.back();else location.href='./index.html'});load();
 (function enablePullToRefresh(){let startY=0,armed=false;const ignored=el=>!!el.closest('input,textarea,select,a,canvas,iframe,[contenteditable="true"]');document.addEventListener('touchstart',e=>{armed=false;if(e.touches.length!==1||window.scrollY>2||ignored(e.target))return;startY=e.touches[0].clientY;armed=startY<150},{passive:true});document.addEventListener('touchend',e=>{if(!armed)return;armed=false;if(!e.changedTouches||!e.changedTouches.length||window.scrollY>2)return;const delta=e.changedTouches[0].clientY-startY;if(delta>100){if(window.__vcryptoPullRefreshBusy)return;window.__vcryptoPullRefreshBusy=true;const task=load();Promise.resolve(task).finally(()=>{window.__vcryptoPullRefreshBusy=false})}},{passive:true});})();
 </script>
