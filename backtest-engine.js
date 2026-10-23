@@ -47,7 +47,7 @@ function run(data,{costBps=20,horizon=24,targetR=2,stopR=1,progress}={}){
   return {trades:n,wins:wins.length,winRate:n?wins.length/n*100:0,expectancyR:mean(net),profitFactor:sumLoss?sumWin/sumLoss:sumWin>0?null:0,netR:net.reduce((a,b)=>a+b,0),avgReturnPct:mean(list.map(t=>t.netReturn))*100,maxDrawdownR:maxDD,medianR:median(net)};
  };
  const summaries=[...byPattern.keys()].map(key=>{
-  const list=trades.filter(t=>t.key===key),train=list.filter(t=>t.split==='İlk %60'),test=list.filter(t=>t.split==='Son %40');
+  const list=trades.filter(t=>t.key===key),train=list.filter(t=>t.split==='İlk %60'),test=list.filter(t=>t.split==='Son %40 test');
   const sample=calc(list),oos=calc(test);return {key,group:list[0]?.group||key.split('::')[0],pattern:list[0]?.pattern||key.split('::')[1],...sample,oosTrades:oos.trades,oosWinRate:oos.winRate,oosExpectancyR:oos.expectancyR,oosProfitFactor:oos.profitFactor,oosNetR:oos.netR,trainTrades:train.length,quality:sample.trades<20?'Düşük örneklem':oos.trades<10?'Test örneklemi az':oos.expectancyR>0?'Test dönemi pozitif':'Test dönemi negatif'};
  }).sort((a,b)=>b.oosExpectancyR-a.oosExpectancyR);
  const overall=calc(trades),oosTrades=trades.filter(t=>t.split==='Son %40 test'),oos=calc(oosTrades);
