@@ -62,14 +62,108 @@ function showReadoutAt(clientX){const canvas=$('chart'),out=$('candleReadout'),l
 }
 const fmt=v=>!Number.isFinite(v)?'—':'$'+v.toLocaleString('en-US',{maximumFractionDigits:v<1?7:2,minimumFractionDigits:v<1?4:2});
 async function getJson(url){let last;for(const host of ['https://api.binance.com/api/v3/','https://data-api.binance.vision/api/v3/'])try{const r=await fetch(host+url);if(!r.ok)throw Error('HTTP '+r.status);return await r.json()}catch(e){last=e}throw last||Error('Veri alınamadı')}
-function pivots(data,type){const out=[];for(let i=2;i<data.length-2;i++){let ok=true;for(let j=i-2;j<=i+2;j++){if(j===i)continue;if(type==='high'?data[j].h>=data[i].h:data[j].l<=data[i].l){ok=false;break}}if(ok)out.push({i,p:type==='high'?data[i].h:data[i].l})}return out}
-function analyze(data){const last=data[data.length-1],close=last.c,highs=pivots(data,'high'),lows=pivots(data,'low'),recentH=highs.slice(-4),recentL=lows.slice(-4),window=data.slice(-Math.min(30,data.length)),hi=Math.max(...window.map(x=>x.h)),lo=Math.min(...window.map(x=>x.l)),range=Math.max(hi-lo,close*.005);let direction=0,name='Yatay kanal / net formasyon yok',confidence=42,reason='Belirgin ve teyitli bir klasik formasyon bulunamadı. Senaryo, son fiyat eğilimi ve volatilite aralığıyla oluşturuldu.',neck=null,height=range*.6;
-if(recentH.length>=2){const a=recentH[recentH.length-2],b=recentH[recentH.length-1],tol=close*.018,neckLow=Math.min(...data.slice(a.i,b.i+1).map(x=>x.l));if(b.i-a.i>=5&&Math.abs(a.p-b.p)<=tol&&close<neckLow){direction=-1;name='Çift tepe · aşağı kırılım';neck=neckLow;height=Math.max(a.p, b.p)-neck;confidence=68;reason='Benzer seviyedeki iki tepe sonrası boyun çizgisinin altında kapanış görüldü. Aşağı senaryo kırılımla teyit edilir.'}}
-if(!direction&&recentL.length>=2){const a=recentL[recentL.length-2],b=recentL[recentL.length-1],tol=close*.018,neckHigh=Math.max(...data.slice(a.i,b.i+1).map(x=>x.h));if(b.i-a.i>=5&&Math.abs(a.p-b.p)<=tol&&close>neckHigh){direction=1;name='Çift dip · yukarı kırılım';neck=neckHigh;height=neck-Math.min(a.p,b.p);confidence=68;reason='Benzer seviyedeki iki dip sonrası boyun çizgisinin üstünde kapanış görüldü. Yukarı senaryo kırılımla teyit edilir.'}}
-if(!direction&&recentH.length>=3){const [a,b,c]=recentH.slice(-3);if(b.p>a.p*1.015&&b.p>c.p*1.015&&Math.abs(a.p-c.p)<=close*.035&&close<Math.min(...data.slice(a.i,c.i+1).map(x=>x.l))){direction=-1;name='Omuz-baş-omuz';neck=Math.min(...data.slice(a.i,c.i+1).map(x=>x.l));height=b.p-neck;confidence=64;reason='Üç tepe yapısı omuz-baş-omuz formasyonuna benziyor. Boyun altı hareket formasyonu teyit eder.'}}
-if(!direction&&recentL.length>=3){const [a,b,c]=recentL.slice(-3);if(b.p<a.p*.985&&b.p<c.p*.985&&Math.abs(a.p-c.p)<=close*.035&&close>Math.max(...data.slice(a.i,c.i+1).map(x=>x.h))){direction=1;name='Ters omuz-baş-omuz';neck=Math.max(...data.slice(a.i,c.i+1).map(x=>x.h));height=neck-b.p;confidence=64;reason='Üç dip yapısı ters omuz-baş-omuz formasyonuna benziyor. Boyun üstü hareket formasyonu teyit eder.'}}
-if(!direction){const n=Math.min(20,data.length),old=data[data.length-n].c,change=close/old-1,ema=data.slice(-12).reduce((a,x)=>a+x.c,0)/Math.min(12,data.length);direction=change>.025?1:change<-.025?-1:close>=ema?1:-1;name=change>.025?'Yükselen eğilim · devam senaryosu':change<-.025?'Düşen eğilim · devam senaryosu':'Yatay sıkışma · kırılım bekleniyor';confidence=Math.abs(change)>.05?56:44;reason='Klasik formasyon teyidi yok. Sarı çizgi son fiyat eğilimi, destek/direnç aralığı ve volatilite kullanılarak çizilen alternatif senaryodur; teyitli formasyon değildir.';height=Math.max(range*.55,close*.012)}
-const atrs=[];for(let i=Math.max(1,data.length-15);i<data.length;i++)atrs.push(Math.max(data[i].h-data[i].l,Math.abs(data[i].h-data[i-1].c),Math.abs(data[i].l-data[i-1].c)));const atr=atrs.reduce((a,b)=>a+b,0)/Math.max(1,atrs.length);height=Math.max(height||0,atr*2,close*.005);const target1=direction===1?close+height:close-height,target2=direction===1?close+height*1.65:close-height*1.65,stop=direction===1?close-Math.max(atr*1.5,height*.45):close+Math.max(atr*1.5,height*.45);return {direction,name,confidence,reason,neck,target1,target2,stop,hi,lo,atr}}
+function pivots(data,type){
+ const out=[],radius=2;
+ for(let i=radius;i<data.length-radius;i++){
+  let ok=true;const value=type==='high'?data[i].h:data[i].l;
+  for(let j=i-radius;j<=i+radius;j++){if(j===i)continue;const other=type==='high'?data[j].h:data[j].l;if(type==='high'?other>=value:other<=value){ok=false;break}}
+  if(ok)out.push({i,p:value});
+ }
+ return out;
+}
+function analyze(data){
+ const last=data[data.length-1],close=last.c,highs=pivots(data,'high'),lows=pivots(data,'low');
+ const window=data.slice(-Math.min(30,data.length)),hi=Math.max(...window.map(x=>x.h)),lo=Math.min(...window.map(x=>x.l)),range=Math.max(hi-lo,close*.005);
+ const tr=[];for(let i=Math.max(1,data.length-15);i<data.length;i++)tr.push(Math.max(data[i].h-data[i].l,Math.abs(data[i].h-data[i-1].c),Math.abs(data[i].l-data[i-1].c)));
+ const atr=tr.reduce((a,b)=>a+b,0)/Math.max(1,tr.length);
+ const avg=(arr)=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:0;
+ const vols=data.slice(-21,-1).map(x=>x.v),volAvg=avg(vols),volRecent=avg(data.slice(-5).map(x=>x.v)),volumeRatio=volAvg>0?volRecent/volAvg:1;
+ const closes=data.map(x=>x.c),rsiPeriod=14;let gains=0,losses=0;
+ for(let i=Math.max(1,closes.length-rsiPeriod);i<closes.length;i++){const change=closes[i]-closes[i-1];if(change>0)gains+=change;else losses-=change}
+ const rsi=losses===0?100:100-(100/(1+(gains/Math.max(losses,1e-12))));
+ const emaFast=avg(closes.slice(-9)),emaSlow=avg(closes.slice(-21)),trend=emaFast>emaSlow?1:-1;
+ const recentH=highs.slice(-4),recentL=lows.slice(-4);
+ let direction=trend,name='Yatay kanal / net formasyon yok',confidence=42,reason='Net bir klasik formasyon teyit edilmedi. Yön değerlendirmesi trend, momentum ve volatiliteyle desteklenen alternatif senaryodur.',neck=null,height=range*.6,confirmed=false,patternFound=false;
+ const tol=Math.max(close*.018,atr*.65);
+ // Çift tepe/dip: iki dönüş noktasının benzerliği, aralık ve boyun çizgisi kontrol edilir.
+ if(recentH.length>=2){
+  const a=recentH[recentH.length-2],b=recentH[recentH.length-1],between=data.slice(a.i,b.i+1),neckLow=Math.min(...between.map(x=>x.l));
+  if(b.i-a.i>=4&&Math.abs(a.p-b.p)<=tol&&between.length>=5){
+   patternFound=true;neck=neckLow;height=Math.max(a.p,b.p)-neck;
+   if(close<neckLow){direction=-1;name='Çift tepe · aşağı kırılım teyitli';confidence=62;confirmed=true;reason='Benzer seviyelerde iki tepe oluştu ve fiyat aradaki dip seviyesinin altında kapandı.'}
+   else {direction=-1;name='Çift tepe adayı · kırılım bekleniyor';confidence=46;reason='İki tepe benzer seviyede; ancak boyun çizgisi aşağı kırılmadı. Bu nedenle formasyon henüz teyitli değil.'}
+  }
+ }
+ if(!patternFound&&recentL.length>=2){
+  const a=recentL[recentL.length-2],b=recentL[recentL.length-1],between=data.slice(a.i,b.i+1),neckHigh=Math.max(...between.map(x=>x.h));
+  if(b.i-a.i>=4&&Math.abs(a.p-b.p)<=tol&&between.length>=5){
+   patternFound=true;neck=neckHigh;height=neck-Math.min(a.p,b.p);
+   if(close>neckHigh){direction=1;name='Çift dip · yukarı kırılım teyitli';confidence=62;confirmed=true;reason='Benzer seviyelerde iki dip oluştu ve fiyat aradaki tepe seviyesinin üzerinde kapandı.'}
+   else {direction=1;name='Çift dip adayı · kırılım bekleniyor';confidence=46;reason='İki dip benzer seviyede; ancak boyun çizgisi yukarı kırılmadı. Bu nedenle formasyon henüz teyitli değil.'}
+  }
+ }
+ // Omuz-baş-omuz ve ters formasyon; başın iki omuzdan anlamlı biçimde ayrılması aranır.
+ if(!patternFound&&recentH.length>=3){
+  const [a,b,c]=recentH.slice(-3),between=data.slice(a.i,c.i+1),neckLow=Math.min(...between.map(x=>x.l));
+  if(b.i>a.i&&c.i>b.i&&b.p>a.p+atr*.5&&b.p>c.p+atr*.5&&Math.abs(a.p-c.p)<=Math.max(close*.04,atr*1.5)){
+   patternFound=true;neck=neckLow;height=b.p-neckLow;
+   if(close<neckLow){direction=-1;name='Omuz-baş-omuz · kırılım teyitli';confidence=64;confirmed=true;reason='Baş iki omuzdan yüksek ve boyun çizgisi aşağı kırılmış durumda.'}
+   else {direction=-1;name='Omuz-baş-omuz adayı · teyit bekliyor';confidence=47;reason='Omuz-baş-omuz geometrisi oluşuyor; boyun çizgisi kırılmadan sinyal teyitli sayılmaz.'}
+  }
+ }
+ if(!patternFound&&recentL.length>=3){
+  const [a,b,c]=recentL.slice(-3),between=data.slice(a.i,c.i+1),neckHigh=Math.max(...between.map(x=>x.h));
+  if(b.i>a.i&&c.i>b.i&&b.p<a.p-atr*.5&&b.p<c.p-atr*.5&&Math.abs(a.p-c.p)<=Math.max(close*.04,atr*1.5)){
+   patternFound=true;neck=neckHigh;height=neckHigh-b.p;
+   if(close>neckHigh){direction=1;name='Ters omuz-baş-omuz · kırılım teyitli';confidence=64;confirmed=true;reason='Baş iki omuzdan aşağıda ve boyun çizgisi yukarı kırılmış durumda.'}
+   else {direction=1;name='Ters omuz-baş-omuz adayı · teyit bekliyor';confidence=47;reason='Ters omuz-baş-omuz geometrisi oluşuyor; boyun çizgisi kırılmadan sinyal teyitli sayılmaz.'}
+  }
+ }
+ // Üçgen: pivot tepeler/dipler birbirine yaklaşırken kırılım veya bekleme durumu belirlenir.
+ if(!patternFound&&recentH.length>=3&&recentL.length>=3){
+  const hs=recentH.slice(-3),ls=recentL.slice(-3),hDrop=hs[0].p-hs[2].p,lRise=ls[2].p-ls[0].p;
+  const contracting=hDrop>atr*.35&&lRise>atr*.35&&hs[0].i<hs[1].i&&hs[1].i<hs[2].i&&ls[0].i<ls[1].i&&ls[1].i<ls[2].i;
+  const flatHigh=Math.max(...hs.map(p=>p.p))-Math.min(...hs.map(p=>p.p))<=Math.max(close*.012,atr*.8);
+  const flatLow=Math.max(...ls.map(p=>p.p))-Math.min(...ls.map(p=>p.p))<=Math.max(close*.012,atr*.8);
+  const upper=avg(hs.map(p=>p.p)),lower=avg(ls.map(p=>p.p));
+  if(contracting&&upper>lower){
+   patternFound=true;neck=direction>0?upper:lower;height=Math.max((upper-lower)*.75,atr);
+   if(close>Math.max(...hs.map(p=>p.p))){direction=1;name='Simetrik üçgen · yukarı kırılım';confidence=59;confirmed=true;reason='Alçalan tepeler ve yükselen diplerden oluşan sıkışma yukarı kırıldı.'}
+   else if(close<Math.min(...ls.map(p=>p.p))){direction=-1;name='Simetrik üçgen · aşağı kırılım';confidence=59;confirmed=true;reason='Alçalan tepeler ve yükselen diplerden oluşan sıkışma aşağı kırıldı.'}
+   else {direction=trend;name='Simetrik üçgen · kırılım bekleniyor';confidence=45;reason='Tepeler ve dipler birbirine yaklaşıyor; yön, sınırların dışında kapanışla netleşebilir.'}
+  }else if(flatHigh&&lRise>atr*.5){
+   patternFound=true;neck=upper;height=Math.max(upper-ls[0].p,atr);
+   if(close>Math.max(...hs.map(p=>p.p))){direction=1;name='Yükselen üçgen · yukarı kırılım';confidence=60;confirmed=true;reason='Yatay direnç ve yükselen dipler yapısı direnç üstü kapanışla kırıldı.'}
+   else {direction=1;name='Yükselen üçgen adayı · teyit bekliyor';confidence=46;reason='Yatay direnç ve yükselen dipler görülüyor; direnç kırılmadan teyit yok.'}
+  }else if(flatLow&&hDrop>atr*.5){
+   patternFound=true;neck=lower;height=Math.max(hs[0].p-lower,atr);
+   if(close<Math.min(...ls.map(p=>p.p))){direction=-1;name='Alçalan üçgen · aşağı kırılım';confidence=60;confirmed=true;reason='Yatay destek ve alçalan tepeler yapısı destek altı kapanışla kırıldı.'}
+   else {direction=-1;name='Alçalan üçgen adayı · teyit bekliyor';confidence=46;reason='Yatay destek ve alçalan tepeler görülüyor; destek kırılmadan teyit yok.'}
+  }
+ }
+ // Formasyon yoksa basit yön sinyali; son 20 kapanışın değişimi ve momentum birlikte kullanılır.
+ if(!patternFound){
+  const n=Math.min(20,data.length),change=close/data[data.length-n].c-1;
+  direction=Math.abs(change)>.02?(change>0?1:-1):trend;
+  name=Math.abs(change)>.025?(change>0?'Yükselen eğilim · devam senaryosu':'Düşen eğilim · devam senaryosu'):'Yatay sıkışma · kırılım bekleniyor';
+  confidence=Math.abs(change)>.05?52:41;height=Math.max(range*.55,atr*1.5,close*.012);
+ }
+ // Hacim ve RSI yalnızca teyit puanını etkiler; tek başlarına formasyon oluşturmazlar.
+ if(confirmed){confidence+=volumeRatio>=1.25?8:volumeRatio<.75?-5:0}
+ else if(patternFound&&volumeRatio>=1.5)confidence+=2;
+ if(direction>0&&rsi>=50&&rsi<=72)confidence+=4;
+ else if(direction<0&&rsi<=50&&rsi>=28)confidence+=4;
+ else if((direction>0&&rsi>78)||(direction<0&&rsi<22))confidence-=4;
+ confidence=Math.max(35,Math.min(78,Math.round(confidence)));
+ if(confirmed){
+  reason+=' Son 5 mumun ortalama hacmi, önceki 20 mumla karşılaştırıldı ('+volumeRatio.toFixed(2)+'×); RSI(14) '+Math.round(rsi)+'. Hacim teyidi tek başına yeterli değildir.';
+ }else{
+  reason+=' Hacim oranı '+volumeRatio.toFixed(2)+'×, RSI(14) '+Math.round(rsi)+'. “Heuristik güven” istatistiksel başarı olasılığı değildir.';
+ }
+ height=Math.max(height||0,atr*1.5,close*.005);
+ const target1=direction>0?close+height:close-height,target2=direction>0?close+height*1.65:close-height*1.65,stop=direction>0?close-Math.max(atr*1.5,height*.45):close+Math.max(atr*1.5,height*.45);
+ return {direction,name,confidence,reason,neck,target1,target2,stop,hi,lo,atr,volumeRatio,rsi,confirmed};
+}
 function draw(data,result){const canvas=$('chart'),rect=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.max(1,Math.floor(rect.width*dpr));canvas.height=Math.max(1,Math.floor(rect.height*dpr));const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const w=rect.width,h=rect.height;ctx.clearRect(0,0,w,h);if(!data.length)return;const cfg=views[view],visible=visibleCandles(),forecastCount=cfg.future,step=(w-70)/(visible.length+forecastCount),left=4,right=66,top=15,bottom=26,cw=w-left-right,ch=h-top-bottom;const future=[];const last=visible[visible.length-1].c;for(let i=1;i<=forecastCount;i++){const progress=i/forecastCount,trend=last+(result.target1-last)*progress;const wave=Math.sin(i*1.35)*result.atr*.45;future.push(trend+wave)}const values=visible.flatMap(x=>[x.h,x.l]).concat(future,[result.target1,result.target2,result.stop]);let max=Math.max(...values),min=Math.min(...values),pad=(max-min)*.1||last*.02;max+=pad;min=Math.max(0,min-pad);const y=v=>top+(max-v)/(max-min||1)*ch,x=i=>left+(i+.5)*step;ctx.font='14px system-ui';ctx.strokeStyle='#20374e';ctx.fillStyle='#8ca1b7';ctx.lineWidth=1;for(let i=0;i<5;i++){const yy=top+i*ch/4,val=max-i*(max-min)/4;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillText(val.toLocaleString('en-US',{maximumFractionDigits:val<1?5:2}),w-right+5,yy+4)}const bw=Math.max(2,Math.min(8,step*.58));visible.forEach((k,i)=>{const xx=x(i),up=k.c>=k.o;ctx.strokeStyle=up?'#21d6b0':'#ff6579';ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(xx,y(k.h));ctx.lineTo(xx,y(k.l));ctx.stroke();ctx.fillRect(xx-bw/2,y(Math.max(k.o,k.c)),bw,Math.max(1,y(Math.min(k.o,k.c))-y(Math.max(k.o,k.c))))});const startX=x(visible.length-1);ctx.save();ctx.setLineDash([5,5]);ctx.strokeStyle='#f5c451';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(startX,y(last));future.forEach((v,i)=>ctx.lineTo(left+(visible.length+i+.5)*step,y(v)));ctx.stroke();ctx.restore();[{v:result.target1,c:'#4ca8ff',label:'H1'},{v:result.target2,c:'#21d6b0',label:'H2'},{v:result.stop,c:'#ff6579',label:'İptal'}].forEach(a=>{ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle=a.c;ctx.beginPath();ctx.moveTo(left,y(a.v));ctx.lineTo(w-right+2,y(a.v));ctx.stroke();ctx.restore();ctx.fillStyle=a.c;ctx.font='bold 11px system-ui';ctx.fillText(a.label,w-right+5,y(a.v)-4)});ctx.fillStyle='#f5c451';ctx.beginPath();ctx.arc(startX,y(last),4,0,Math.PI*2);ctx.fill()}
 
 function setupCandleReadout(){
