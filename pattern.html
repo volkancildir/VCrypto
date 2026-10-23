@@ -161,8 +161,42 @@ function analyze(data){
   reason+=' Hacim oranı '+volumeRatio.toFixed(2)+'×, RSI(14) '+Math.round(rsi)+'. “Heuristik güven” istatistiksel başarı olasılığı değildir.';
  }
  height=Math.max(height||0,atr*1.5,close*.005);
- const target1=direction>0?close+height:close-height,target2=direction>0?close+height*1.65:close-height*1.65,stop=direction>0?close-Math.max(atr*1.5,height*.45):close+Math.max(atr*1.5,height*.45);
- return {direction,name,confidence,reason,neck,target1,target2,stop,hi,lo,atr,volumeRatio,rsi,confirmed};
+ // Hedef 1: formasyon varsa klasik ölçülü hareket; yoksa ATR tabanlı senaryo.
+ const targetBase=patternFound&&Number.isFinite(neck)?neck:close;
+ const target1=direction>0?targetBase+height:targetBase-height;
+ // Hedef 2 uzatması: geçmişteki benzer yönlü kırılım benzeri hareketlerde ATR uzatmalarını test eder.
+ const optimizeExtension=(series,dir,atrNow)=>{
+  const candidates=[0.75,1,1.25,1.5,1.618,2,2.5,3],samples=[];
+  for(let i=30;i<series.length-7;i++){
+   const hist=series.slice(Math.max(0,i-14),i),bar=series[i];
+   const priorHigh=Math.max(...hist.map(x=>x.h)),priorLow=Math.min(...hist.map(x=>x.l));
+   const breaks=dir>0?bar.c>priorHigh&&bar.v>=avg(hist.slice(-5).map(x=>x.v)):bar.c<priorLow&&bar.v>=avg(hist.slice(-5).map(x=>x.v));
+   if(!breaks)continue;
+   const localTr=[];for(let j=Math.max(1,i-14);j<=i;j++)localTr.push(Math.max(series[j].h-series[j].l,Math.abs(series[j].h-series[j-1].c),Math.abs(series[j].l-series[j-1].c)));
+   const localAtr=avg(localTr);if(!(localAtr>0))continue;
+   const future=series.slice(i+1,i+7);if(future.length<6)continue;
+   const favorable=dir>0?Math.max(...future.map(x=>x.h))-bar.c:bar.c-Math.min(...future.map(x=>x.l));
+   const adverse=dir>0?bar.c-Math.min(...future.map(x=>x.l)):Math.max(...future.map(x=>x.h))-bar.c;
+   samples.push({favorable:favorable/localAtr,adverse:adverse/localAtr});
+  }
+  if(samples.length<8)return {multiple:1.5,count:samples.length,optimized:false};
+  let best={multiple:1.5,score:-Infinity};
+  for(const multiple of candidates){
+   let wins=0,losses=0;
+   for(const s of samples){if(s.favorable>=multiple&&s.adverse<1)wins++;else if(s.adverse>=1&&s.favorable<multiple)losses++}
+   const score=(wins-losses)/samples.length;
+   if(score>best.score)best={multiple,score};
+  }
+  return {multiple:best.multiple,count:samples.length,optimized:true};
+ };
+ const extension=optimizeExtension(data,direction,atr);
+ const target2=target1+direction*Math.max(atr*extension.multiple,patternFound?height*.25:atr);
+ let stop;
+ if(patternFound&&direction>0&&recentL.length)stop=Math.min(...recentL.slice(-2).map(p=>p.p))-atr*.25;
+ else if(patternFound&&direction<0&&recentH.length)stop=Math.max(...recentH.slice(-2).map(p=>p.p))+atr*.25;
+ else stop=direction>0?close-atr*1.5:close+atr*1.5;
+ reason+=' Hedef 1 '+(patternFound?'formasyonun ölçülü hareketine':'ATR senaryosuna')+' göre hesaplandı. Hedef 2 için geçmişteki '+extension.count+' kırılım benzeri örnek test edildi; uzatma '+extension.multiple+' ATR'+(extension.optimized?' (örneklem içi optimizasyon)':' (yeterli örnek olmadığı için varsayılan)')+'. Bu test bağımsız başarı garantisi değildir.';
+ return {direction,name,confidence,reason,neck,target1,target2,stop,hi,lo,atr,volumeRatio,rsi,confirmed,targetMethod:patternFound?'pattern-measured-move':'atr-scenario',extensionMultiple:extension.multiple,extensionSamples:extension.count};
 }
 function draw(data,result){const canvas=$('chart'),rect=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.max(1,Math.floor(rect.width*dpr));canvas.height=Math.max(1,Math.floor(rect.height*dpr));const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const w=rect.width,h=rect.height;ctx.clearRect(0,0,w,h);if(!data.length)return;const cfg=views[view],visible=visibleCandles(),forecastCount=cfg.future,step=(w-70)/(visible.length+forecastCount),left=4,right=66,top=15,bottom=26,cw=w-left-right,ch=h-top-bottom;const future=[];const last=visible[visible.length-1].c;for(let i=1;i<=forecastCount;i++){const progress=i/forecastCount,trend=last+(result.target1-last)*progress;const wave=Math.sin(i*1.35)*result.atr*.45;future.push(trend+wave)}const values=visible.flatMap(x=>[x.h,x.l]).concat(future,[result.target1,result.target2,result.stop]);let max=Math.max(...values),min=Math.min(...values),pad=(max-min)*.1||last*.02;max+=pad;min=Math.max(0,min-pad);const y=v=>top+(max-v)/(max-min||1)*ch,x=i=>left+(i+.5)*step;ctx.font='14px system-ui';ctx.strokeStyle='#20374e';ctx.fillStyle='#8ca1b7';ctx.lineWidth=1;for(let i=0;i<5;i++){const yy=top+i*ch/4,val=max-i*(max-min)/4;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(w-right,yy);ctx.stroke();ctx.fillText(val.toLocaleString('en-US',{maximumFractionDigits:val<1?5:2}),w-right+5,yy+4)}const bw=Math.max(2,Math.min(8,step*.58));visible.forEach((k,i)=>{const xx=x(i),up=k.c>=k.o;ctx.strokeStyle=up?'#21d6b0':'#ff6579';ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(xx,y(k.h));ctx.lineTo(xx,y(k.l));ctx.stroke();ctx.fillRect(xx-bw/2,y(Math.max(k.o,k.c)),bw,Math.max(1,y(Math.min(k.o,k.c))-y(Math.max(k.o,k.c))))});const startX=x(visible.length-1);ctx.save();ctx.setLineDash([5,5]);ctx.strokeStyle='#f5c451';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(startX,y(last));future.forEach((v,i)=>ctx.lineTo(left+(visible.length+i+.5)*step,y(v)));ctx.stroke();ctx.restore();[{v:result.target1,c:'#4ca8ff',label:'H1'},{v:result.target2,c:'#21d6b0',label:'H2'},{v:result.stop,c:'#ff6579',label:'İptal'}].forEach(a=>{ctx.save();ctx.setLineDash([4,4]);ctx.strokeStyle=a.c;ctx.beginPath();ctx.moveTo(left,y(a.v));ctx.lineTo(w-right+2,y(a.v));ctx.stroke();ctx.restore();ctx.fillStyle=a.c;ctx.font='bold 11px system-ui';ctx.fillText(a.label,w-right+5,y(a.v)-4)});ctx.fillStyle='#f5c451';ctx.beginPath();ctx.arc(startX,y(last),4,0,Math.PI*2);ctx.fill()}
 
