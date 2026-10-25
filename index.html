@@ -529,11 +529,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   <div class="panel" id="walletAddPanel" hidden><div class="section-title" id="walletFormTitle">Portföye coin ekle</div><form id="walletForm" class="wallet-form">
    <div class="wallet-field full"><label for="walletCoin">Coin adı veya sembolü</label><input id="walletCoin" list="walletCoinOptions" placeholder="Bitcoin veya BTC" autocomplete="off" required><datalist id="walletCoinOptions"></datalist></div>
    <div class="wallet-field"><label for="walletAmount">Coin miktarı</label><input id="walletAmount" type="number" min="0" step="any" placeholder="0.00" required></div>
-   <div class="wallet-field"><label for="walletAvgPrice">Ortalama alış fiyatı (USDT)</label><input id="walletAvgPrice" type="number" min="0" step="any" placeholder="Örn. 62000" required></div>
+   <div class="wallet-field"><label for="walletAvgPrice">Ortalama maliyet (USDT, isteğe bağlı)</label><input id="walletAvgPrice" type="number" min="0" step="any" placeholder="Bilmiyorsan boş bırak"></div>
    <div class="wallet-field full"><label for="walletNote">Not (isteğe bağlı)</label><input id="walletNote" maxlength="100" placeholder="Örn. Binance spot"></div>
    <div class="wallet-actions wallet-field full"><button class="wallet-btn primary" type="submit">Kaydet</button><button class="wallet-btn" type="button" id="walletCancelEdit">İptal</button></div>
   </form></div>
-  <div class="panel" id="walletOcrPanel" hidden><div class="section-title">Görselden okunan bilgiler</div><p class="wallet-notice">Okuma işlemi cihazındaki tarayıcıda yapılır. Hatalı okunabilecek alanları kontrol edip düzeltmeden portföye kaydedilmez.</p><div id="walletOcrStatus" class="wallet-muted">Görsel bekleniyor.</div><div id="walletOcrPreview"></div><div class="wallet-actions"><button class="wallet-btn primary" type="button" id="walletSaveOcr" disabled>Seçilenleri portföye ekle</button><button class="wallet-btn" type="button" id="walletCancelOcr">Kapat</button></div></div>
+  <div class="panel" id="walletOcrPanel" hidden><div class="section-title">Görselden okunan bilgiler</div><p class="wallet-notice">Okuma işlemi cihazındaki tarayıcıda yapılır. Coin ve miktarları kontrol et; ortalama maliyet bilmiyorsan boş bırakabilirsin.</p><div id="walletOcrStatus" class="wallet-muted">Görsel bekleniyor.</div><div id="walletOcrPreview"></div><div class="wallet-actions"><button class="wallet-btn primary" type="button" id="walletSaveOcr" disabled>Seçilenleri portföye ekle</button><button class="wallet-btn" type="button" id="walletCancelOcr">Kapat</button></div></div>
   <div class="panel"><div class="section-title">Varlıklarım <span class="wallet-muted" id="walletCount"></span></div><div class="wallet-table-wrap" id="walletTableWrap"><div class="wallet-empty">Henüz portföye coin eklemedin.</div></div><p class="wallet-notice">Kâr/zarar, girdiğin ortalama alış fiyatı ile mevcut fiyat karşılaştırılarak hesaplanır. Değerler USDT cinsindedir; fiyat verisi alınamayan coinlerde son bilinen değer kullanılamayabilir.</p></div>
  </div>
  <div id="walletDistributionView" class="wallet-subview" hidden><div class="wallet-summary"><div class="wallet-stat"><span>Portföy değeri</span><strong id="walletDistValue">—</strong></div><div class="wallet-stat"><span>Coin sayısı</span><strong id="walletDistCount">0</strong></div></div><div class="panel"><div class="section-title">Coin bazında dağılım</div><div id="walletChartArea" class="wallet-empty">Dağılım grafiği için önce portföyüne coin ekle.</div></div><div class="panel"><div class="section-title">Dağılım tablosu</div><div class="wallet-table-wrap" id="walletDistTable"><div class="wallet-empty">Henüz veri yok.</div></div></div></div>
@@ -954,7 +954,7 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.
 }
 </style>
 
-<script src="./wallet.js?v=6"></script>
+<script src="./wallet.js?v=7"></script>
 </body>
 </html>
 <style>
