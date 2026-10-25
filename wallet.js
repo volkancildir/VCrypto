@@ -3,7 +3,8 @@
 const KEY='vcrypto-wallet-v1';
 const PALETTE=['#21d6b0','#4e8cff','#b58aff','#ffb84d','#f6465d','#5bd4e8','#a3d977','#f58ec0','#9aa8ba','#d5c56b','#ff8a5b','#70a6ff'];
 let holdings=readHoldings(),editingId=null,ocrCandidates=[];
-const el=id=>document.getElementById(id);\nfunction marketCoins(){try{return typeof coins!=='undefined'&&Array.isArray(coins)?coins:[]}catch(e){return[]}}
+const el=id=>document.getElementById(id);
+function marketCoins(){try{return typeof coins!=='undefined'&&Array.isArray(coins)?coins:[]}catch(e){return[]}}
 const nfmt=(n,d=2)=>Number.isFinite(Number(n))?Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:d}):'—';
 const money=n=>Number.isFinite(Number(n))?'$'+nfmt(Number(n),2):'—';
 const pct=n=>Number.isFinite(Number(n))?(n>0?'+':'')+nfmt(n,2)+'%':'—';
