@@ -311,6 +311,22 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 
 /* Wallet dashboard */
 .wallet-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:5px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;margin:0 0 16px}
+/* Cüzdan yazılarını 3 kademe büyüt */
+#screen-wallet .wallet-tab{font-size:19px}
+#screen-wallet .wallet-stat span{font-size:16px}
+#screen-wallet .wallet-stat strong{font-size:27px}
+#screen-wallet .wallet-stat small{font-size:15px}
+#screen-wallet .wallet-btn{font-size:17px}
+#screen-wallet .wallet-field label{font-size:16px}
+#screen-wallet .wallet-field input,#screen-wallet .wallet-field select,#screen-wallet .wallet-field textarea{font-size:17px;padding:14px}
+#screen-wallet .wallet-table{font-size:16px}
+#screen-wallet .wallet-coin-option b{font-size:17px}
+#screen-wallet .wallet-coin-option small{font-size:15px}
+#screen-wallet .wallet-legend-row{font-size:16px}
+#screen-wallet .wallet-notice,#screen-wallet .wallet-muted{font-size:15px}
+#screen-wallet .wallet-donut-label{font-size:15px}
+#screen-wallet .wallet-donut-label strong{font-size:18px}
+#screen-wallet .wallet-empty{font-size:16px}
 .wallet-tab{border:0;border-radius:10px;padding:13px 10px;background:transparent;color:var(--muted);font-weight:800;font-size:16px}
 .wallet-tab.active{background:var(--teal);color:#061410}
 .wallet-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
@@ -529,13 +545,13 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
   <div class="panel" id="walletAddPanel" hidden><div class="section-title" id="walletFormTitle">Portföye coin ekle</div><form id="walletForm" class="wallet-form">
    <div class="wallet-field full"><label for="walletCoin">Coin ara ve seç</label><input id="walletCoin" list="walletCoinOptions" placeholder="Coin adı veya sembolü yaz (BTC, Bitcoin…)" autocomplete="off" required><datalist id="walletCoinOptions"></datalist><div id="walletCoinResults" class="wallet-coin-results" hidden></div></div>
    <div class="wallet-field"><label for="walletAmount">Coin miktarı</label><input id="walletAmount" type="number" min="0" step="any" placeholder="0.00" required></div>
-   <div class="wallet-field"><label for="walletAvgCurrency">Maliyet para birimi</label><select id="walletAvgCurrency"><option value="TL">TL (otomatik USDT/USD dönüşümü)</option><option value="USD">USD / USDT (dönüşüm yok)</option></select></div>
+   <div class="wallet-field"><label for="walletAvgCurrency">Maliyet para birimi</label><select id="walletAvgCurrency"><option value="TL">TL</option><option value="USD">USDT</option></select></div>
    <div class="wallet-field"><label for="walletAvgPrice">Ortalama maliyet (isteğe bağlı)</label><input id="walletAvgPrice" type="number" min="0" step="any" placeholder="Örn. 1250" inputmode="decimal"></div>
    <div class="wallet-field full"><label for="walletNote">Not (isteğe bağlı)</label><input id="walletNote" maxlength="100" placeholder="Örn. Binance spot"></div>
    <div class="wallet-actions wallet-field full"><button class="wallet-btn primary" type="submit">Kaydet</button><button class="wallet-btn" type="button" id="walletCancelEdit">İptal</button></div>
   </form></div>
 
-  <div class="panel"><div class="section-title">Varlıklarım <span class="wallet-muted" id="walletCount"></span></div><div class="wallet-table-wrap" id="walletTableWrap"><div class="wallet-empty">Henüz portföye coin eklemedin.</div></div><p class="wallet-notice">Maliyet para birimini seç: TL girersen güncel kurla USD/USDT karşılığı hesaplanır; USD/USDT girersen doğrudan kullanılır. Portföy değeri ve kâr/zarar USD bazında gösterilir. Maliyet boşsa o coin için kâr/zarar hesaplanmaz.</p></div>
+  <div class="panel"><div class="section-title">Varlıklarım <span class="wallet-muted" id="walletCount"></span></div><div class="wallet-table-wrap" id="walletTableWrap"><div class="wallet-empty">Henüz portföye coin eklemedin.</div></div><p class="wallet-notice">TL seçersen maliyet güncel kurla USDT karşılığına çevrilir. USDT seçersen doğrudan hesaplanır. Portföy değeri ve kâr/zarar USDT bazındadır. Maliyet boşsa o coin için kâr/zarar hesaplanmaz.</p></div>
  </div>
  <div id="walletDistributionView" class="wallet-subview" hidden><div class="wallet-summary"><div class="wallet-stat"><span>Portföy değeri</span><strong id="walletDistValue">—</strong></div><div class="wallet-stat"><span>Coin sayısı</span><strong id="walletDistCount">0</strong></div></div><div class="panel"><div class="section-title">Coin bazında dağılım</div><div id="walletChartArea" class="wallet-empty">Dağılım grafiği için önce portföyüne coin ekle.</div></div><div class="panel"><div class="section-title">Dağılım tablosu</div><div class="wallet-table-wrap" id="walletDistTable"><div class="wallet-empty">Henüz veri yok.</div></div></div></div>
 </section>
