@@ -1,7 +1,7 @@
 'use strict';
 (function(){
 const KEY='vcrypto-wallet-v1';
-const PALETTE=['#21d6b0','#4e8cff','#b58aff','#ffb84d','#f6465d','#5bd4e8','#a3d977','#f58ec0','#9aa8ba','#d5c56b','#ff8a5b','#70a6ff'];
+const PALETTE=['#36d6c0','#7c9cff','#b49aff','#f2bb65','#ff7188','#67d9e8','#9bdc9a','#f39ac7','#9fb2c8','#d8cf78','#ff9b72','#82b4ff'];
 let holdings=readHoldings(),editingId=null,ocrCandidates=[],usdPerTry=NaN,fxLoading=false;
 const el=id=>document.getElementById(id);
 function marketCoins(){try{return typeof coins!=='undefined'&&Array.isArray(coins)?coins:[]}catch(e){return[]}}
