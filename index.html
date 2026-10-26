@@ -973,7 +973,7 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.
 }
 </style>
 
-<script src="./wallet.js?v=10"></script>
+<script src="./wallet.js?v=11"></script>
 </body>
 </html>
 <style>
@@ -1017,3 +1017,61 @@ body{zoom:1.12}
 }
 </style>
 
+
+
+<style>
+/* Wallet distribution: combine a bold portfolio chart with a clean asset list. */
+#screen-wallet #walletDistributionView .wallet-summary{grid-template-columns:minmax(0,1.5fr) minmax(100px,.7fr);gap:12px}
+#screen-wallet #walletDistributionView .wallet-stat:first-child{background:linear-gradient(135deg,#123b3a 0%,#11233a 100%);border-color:#1c695f;box-shadow:inset 0 1px 0 #ffffff0c}
+#screen-wallet #walletDistributionView .wallet-stat:first-child span{color:#a8d9d0}
+#screen-wallet #walletDistributionView .wallet-stat:first-child strong{font-size:clamp(24px,5vw,34px);color:#f4fffc}
+#screen-wallet #walletDistributionView .wallet-stat:last-child{display:flex;flex-direction:column;justify-content:center}
+#screen-wallet #walletDistributionView .wallet-stat:last-child strong{color:var(--teal);font-size:30px}
+#screen-wallet #walletDistributionView .panel{border-radius:18px}
+#screen-wallet #walletDistributionView .section-title{font-size:23px;margin-bottom:14px}
+#screen-wallet #walletChartArea{padding:0;background:transparent}
+#screen-wallet .wallet-chart-layout{grid-template-columns:minmax(150px,220px) minmax(0,1fr);gap:24px;align-items:center;padding:18px;border-radius:18px;background:linear-gradient(145deg,#12243a,#0c1728);border:1px solid #21364d}
+#screen-wallet .wallet-donut{width:100%;max-width:220px;aspect-ratio:1;border:1px solid #ffffff20;box-shadow:0 0 0 7px #21d6b00a,0 10px 22px #0004}
+#screen-wallet .wallet-donut:after{width:66%;height:66%;background:radial-gradient(circle at 35% 25%,#172b40,#0b1728 78%)}
+#screen-wallet .wallet-donut-label{max-width:70%;width:70%;font-size:11px;letter-spacing:.7px;color:#a9c3d2}
+#screen-wallet .wallet-donut-label span{display:block;font-size:10px;margin-bottom:7px}
+#screen-wallet .wallet-donut-label strong{font-size:clamp(17px,4vw,22px);color:#f4fffc;letter-spacing:0}
+#screen-wallet .wallet-chart-side{min-width:0}
+#screen-wallet .wallet-chart-kicker{font-size:12px;letter-spacing:1.2px;font-weight:800;color:#8ca7ba;margin-bottom:12px}
+#screen-wallet .wallet-chart-asset{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid #ffffff10}
+#screen-wallet .wallet-chart-asset:last-of-type{border-bottom:0}
+#screen-wallet .wallet-chart-asset-name{min-width:0}
+#screen-wallet .wallet-chart-asset-name b{display:block;color:#f4fffc;font-size:16px}
+#screen-wallet .wallet-chart-asset-name small{display:block;color:#91a5b7;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#screen-wallet .wallet-chart-asset>strong{font-size:16px;color:#f4fffc}
+#screen-wallet .wallet-chart-foot{margin-top:12px;color:#91a5b7;font-size:13px}
+#screen-wallet .wallet-assets-list{display:grid;gap:0}
+#screen-wallet .wallet-asset-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:15px 2px;border-bottom:1px solid var(--line)}
+#screen-wallet .wallet-asset-row:last-child{border-bottom:0}
+#screen-wallet .wallet-asset-identity{display:flex;align-items:center;gap:11px;min-width:0}
+#screen-wallet .wallet-asset-identity img,#screen-wallet .wallet-asset-identity .wallet-coin-fallback{width:36px!important;height:36px!important;border-radius:50%;object-fit:contain;flex-shrink:0}
+#screen-wallet .wallet-asset-identity>span:last-child{min-width:0}
+#screen-wallet .wallet-asset-identity b{display:block;color:var(--text);font-size:17px;line-height:1.25}
+#screen-wallet .wallet-asset-identity small{display:block;color:var(--muted);font-size:14px;margin-top:3px}
+#screen-wallet .wallet-asset-numbers{text-align:right;display:grid;gap:4px}
+#screen-wallet .wallet-asset-numbers b{font-size:17px;color:var(--text)}
+#screen-wallet .wallet-asset-numbers span{font-size:14px;font-weight:800;color:var(--teal)}
+#screen-wallet .wallet-asset-bar{grid-column:1/-1;height:5px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:2px}
+#screen-wallet .wallet-asset-bar span{display:block;height:100%;min-width:2px;border-radius:99px}
+@media(max-width:520px){
+ #screen-wallet #walletDistributionView .wallet-summary{grid-template-columns:minmax(0,1fr) 100px;gap:8px}
+ #screen-wallet #walletDistributionView .wallet-stat{padding:14px 12px}
+ #screen-wallet #walletDistributionView .wallet-stat:first-child strong{font-size:25px}
+ #screen-wallet #walletDistributionView .wallet-stat:last-child strong{font-size:27px}
+ #screen-wallet .wallet-chart-layout{grid-template-columns:1fr;justify-items:center;gap:16px;padding:16px 13px}
+ #screen-wallet .wallet-donut{width:190px;max-width:190px}
+ #screen-wallet .wallet-chart-side{width:100%}
+ #screen-wallet .wallet-chart-kicker{font-size:12px}
+ #screen-wallet .wallet-chart-asset-name b,#screen-wallet .wallet-chart-asset>strong{font-size:16px}
+ #screen-wallet .wallet-chart-asset-name small{font-size:13px}
+ #screen-wallet #walletDistributionView .section-title{font-size:21px}
+ #screen-wallet .wallet-asset-row{padding:14px 0;gap:8px}
+ #screen-wallet .wallet-asset-identity b,#screen-wallet .wallet-asset-numbers b{font-size:16px}
+ #screen-wallet .wallet-asset-identity small,#screen-wallet .wallet-asset-numbers span{font-size:13px}
+}
+</style>
