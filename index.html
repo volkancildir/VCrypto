@@ -973,7 +973,7 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.
 }
 </style>
 
-<script src="./wallet.js?v=15"></script>
+<script src="./wallet.js?v=16"></script>
 </body>
 </html>
 <style>
@@ -1117,4 +1117,9 @@ body{zoom:1.12}
 #screen-wallet #walletDistributionView .wallet-stat strong{color:#f3f6fc!important}
 #screen-wallet #walletDistributionView .wallet-stat:last-child strong{color:#36d6c0!important}
 
+
+/* Formasyon analizi: arama çubuğunu 3 kademe büyüt; diğer arama alanlarına dokunma. */
+#screen-pattern > .search{min-height:62px!important;height:62px!important;padding:0 16px!important;gap:12px!important;border-radius:16px!important}
+#screen-pattern > .search > span{font-size:30px!important;line-height:1!important}
+#screen-pattern > .search > input{font-size:19px!important;min-height:58px!important}
 </style>
