@@ -562,7 +562,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
  <div class="screen-heading"><div><p class="eyebrow">KİŞİSEL YATIRIMLARIN</p><h1 class="h1">Cüzdanım</h1><p class="sub">Varlıklarını, maliyetini ve anlık kâr/zararını tek yerden takip et.</p></div></div>
  <div class="wallet-tabs" role="tablist" aria-label="Cüzdan bölümleri"><button class="wallet-tab active" type="button" data-wallet-view="portfolio" role="tab" aria-selected="true">Portföy</button><button class="wallet-tab" type="button" data-wallet-view="distribution" role="tab" aria-selected="false">Dağılım</button></div>
  <div id="walletPortfolioView" class="wallet-subview">
-  <div class="wallet-summary"><div class="wallet-stat wallet-total-card"><span>Toplam portföy değeri</span><strong id="walletTotalValue">—</strong><small id="walletTotalValueTL" class="wallet-total-tl">TL karşılığı hesaplanıyor…</small></div><div class="wallet-stat"><span>Toplam kâr / zarar</span><strong id="walletTotalPnl">—</strong><small id="walletTotalPnlPct">Alış maliyetine göre</small></div></div>
+  <div class="wallet-summary"><div class="wallet-stat wallet-total-card"><span>Toplam portföy değeri</span><strong id="walletTotalValue">TL kuru bekleniyor</strong></div><div class="wallet-stat"><span>Toplam kâr / zarar</span><strong id="walletTotalPnl">—</strong><small id="walletTotalPnlPct">Alış maliyetine göre</small></div></div>
   <div class="wallet-actions"><button class="wallet-btn primary" type="button" id="walletShowAdd">＋ Coin ekle</button><button class="wallet-btn" type="button" id="walletRefreshBtn">↻ Fiyatları yenile</button></div>
   <div class="panel" id="walletAddPanel" hidden><div class="section-title" id="walletFormTitle">Portföye coin ekle</div><form id="walletForm" class="wallet-form">
    <div class="wallet-field full"><label for="walletCoin">Coin ara ve seç</label><input id="walletCoin" list="walletCoinOptions" placeholder="Coin adı veya sembolü yaz (BTC, Bitcoin…)" autocomplete="off" required><datalist id="walletCoinOptions"></datalist><div id="walletCoinResults" class="wallet-coin-results" hidden></div></div>
@@ -973,7 +973,7 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.
 }
 </style>
 
-<script src="./wallet.js?v=13"></script>
+<script src="./wallet.js?v=14"></script>
 </body>
 </html>
 <style>
