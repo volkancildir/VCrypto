@@ -536,7 +536,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 <section class="screen" id="screen-signal">
 <div class="screen-heading"><div><p class="eyebrow">SİSTEMATİK SİNYAL</p><h1 class="h1">Al / Sat tarayıcı</h1><p class="sub">Piyasanın nabzını tut, geçmiş verilerle test edilen sinyalleri keşfet.</p></div><span class="tag" id="signalStatus">Bekliyor</span></div>
 <div class="signal-summary"><div class="signal-stat"><span>AL sinyali</span><strong id="signalBuyCount">—</strong></div><div class="signal-stat"><span>SAT sinyali</span><strong id="signalSellCount">—</strong></div><div class="signal-stat"><span>Tarama</span><strong id="signalScanned">—</strong></div></div>
-<div class="signal-controls"><div class="sub" id="signalTimeframeCaption">Piyasa değeri 250 milyon $ üzeri</div><div class="signal-control-actions"><select id="signalTimeframe" aria-label="Al Sat zaman aralığı"><option value="4h">4 saatlik</option><option value="1d">1 günlük</option><option value="1w">1 haftalık</option><option value="1M">1 aylık</option></select><button class="signal-refresh" id="signalRefresh">↻ Tara</button></div></div>
+<div class="signal-controls"><div class="sub" id="signalTimeframeCaption">Piyasa değerine göre ilk 500 coin</div><div class="signal-control-actions"><select id="signalTimeframe" aria-label="Al Sat zaman aralığı"><option value="4h">4 saatlik</option><option value="1d">1 günlük</option><option value="1w">1 haftalık</option><option value="1M">1 aylık</option></select><button class="signal-refresh" id="signalRefresh">↻ Tara</button></div></div>
 <div class="panel"><div class="coin-list" id="signalRows"><div class="empty">Sinyal taramasını başlatmak için Tara düğmesine bas.</div></div></div>
 <div class="panel"><div class="section-title">Model nasıl karar veriyor?</div><div class="signal-details">EMA 20/50/200 trendi · RSI · MACD histogramı · Bollinger orta bandı · Hacim teyidi. Eşik, geçmiş verinin ilk %70'inde denenir; seçilen eşik son %30'da ayrı test edilir (walk-forward). Test işlemlerinde tahmini komisyon/slippage toplam %0,2 varsayılır.</div></div>
 <p class="signal-footnote">Bu bir olasılık modeli, kesin tahmin veya yatırım tavsiyesi değildir. Test dönemi kısa olabilir; sonuçlar piyasa rejimine göre değişir. En az 3 test işlemi ve pozitif test getirisi yoksa AL sinyali bastırılır. Binance USDT spot verisi bulunmayan coinler atlanır.</p>
@@ -610,27 +610,33 @@ async function getBinanceKlines(symbol,interval,limit=500){
  throw lastError||Error('Binance mum verisi alınamadı.');
 }
 async function getJson(url,timeoutMs=8000){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),timeoutMs);try{const r=await fetch(url,{headers:{accept:'application/json'},signal:controller.signal,cache:'no-store'});if(!r.ok)throw Error(r.status===429?'İstek limiti doldu. Biraz bekleyip yeniden dene.':'HTTP '+r.status);return await r.json()}catch(e){if(e.name==='AbortError')throw Error('Veri kaynağı 30 saniye içinde yanıt vermedi.');throw e}finally{clearTimeout(timer)}}
-async function getBinanceMarkets(){let lastError;for(const base of ['https://data-api.binance.vision/api/v3/','https://api.binance.com/api/v3/']){try{const data=await getJson(base+'ticker/24hr',8000);if(!Array.isArray(data)||!data.length)throw Error('Binance boş veri döndürdü.');return data.filter(t=>typeof t.symbol==='string'&&t.symbol.endsWith('USDT')&&!t.symbol.includes('_')&&Number(t.lastPrice)>0).sort((a,b)=>Number(b.quoteVolume||0)-Number(a.quoteVolume||0)).slice(0,250).map((t,i)=>{const symbol=t.symbol.slice(0,-4);return{id:'binance-'+symbol.toLowerCase(),name:symbol,symbol,image:'',current_price:Number(t.lastPrice),market_cap:null,market_cap_rank:i+1,total_volume:Number(t.quoteVolume||0),price_change_percentage_24h:Number(t.priceChangePercent),ath:null}})}catch(e){lastError=e}}throw lastError||Error('Binance verileri alınamadı.')}
+async function getBinanceMarkets(){let lastError;for(const base of ['https://data-api.binance.vision/api/v3/','https://api.binance.com/api/v3/']){try{const data=await getJson(base+'ticker/24hr',8000);if(!Array.isArray(data)||!data.length)throw Error('Binance boş veri döndürdü.');return data.filter(t=>typeof t.symbol==='string'&&t.symbol.endsWith('USDT')&&!t.symbol.includes('_')&&Number(t.lastPrice)>0).sort((a,b)=>Number(b.quoteVolume||0)-Number(a.quoteVolume||0)).slice(0,500).map((t,i)=>{const symbol=t.symbol.slice(0,-4);return{id:'binance-'+symbol.toLowerCase(),name:symbol,symbol,image:'',current_price:Number(t.lastPrice),market_cap:null,market_cap_rank:i+1,total_volume:Number(t.quoteVolume||0),price_change_percentage_24h:Number(t.priceChangePercent),ath:null}})}catch(e){lastError=e}}throw lastError||Error('Binance verileri alınamadı.')}
+
 async function getMarkets(){
-  let lastError;
-  // CoinGecko is primary so market-cap ranks and coin logos are populated.
-  try{
-    const data=await getJson(API+'/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=24h',10000);
-    if(Array.isArray(data)&&data.length)return data;
-    throw Error('CoinGecko boş veri döndürdü.');
-  }catch(e){lastError=e}
-  try{
-    const primary=await getBinanceMarkets();
-    if(Array.isArray(primary)&&primary.length)return primary;
-    throw Error('Binance boş veri döndürdü.');
-  }catch(e){lastError=e}
-  try{
-    const fallback=await getJson('https://api.coinpaprika.com/v1/tickers?quotes=USD',10000);
-    if(!Array.isArray(fallback)||!fallback.length)throw Error('CoinPaprika boş veri döndürdü.');
-    const mapped=fallback.slice(0,250).map(c=>({id:c.id,name:c.name,symbol:c.symbol,image:'https://static.coinpaprika.com/coin/'+c.id+'/logo.png',current_price:Number(c.quotes?.USD?.price),market_cap:Number(c.quotes?.USD?.market_cap),market_cap_rank:Number(c.rank),total_volume:Number(c.quotes?.USD?.volume_24h),price_change_percentage_24h:Number(c.quotes?.USD?.percent_change_24h),ath:null})).filter(c=>Number.isFinite(c.current_price));
-    if(mapped.length)return mapped;
-    throw Error('CoinPaprika geçerli fiyat döndürmedi.');
-  }catch(e){throw Error('CoinGecko, Binance ve CoinPaprika veri kaynaklarına ulaşılamadı. Son hata: '+(e?.message||lastError?.message||'bağlantı hatası'))}
+ let lastError;
+ // Primary source: two CoinGecko pages, sorted by actual market cap (250 + 250).
+ try{
+  const pages=await Promise.all([1,2].map(page=>getJson(API+'/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page='+page+'&sparkline=false&price_change_percentage=24h',12000)));
+  const byId=new Map();
+  pages.flat().forEach(c=>{if(c&&c.id&&!byId.has(c.id))byId.set(c.id,c)});
+  const data=Array.from(byId.values()).sort((a,b)=>(Number(a.market_cap_rank)||999999)-(Number(b.market_cap_rank)||999999)).slice(0,500);
+  if(data.length>=500)return data;
+  throw Error('CoinGecko 500 coinlik listeyi tamamlayamadı.');
+ }catch(e){lastError=e}
+ // CoinPaprika fallback: preserve market-cap ranking when CoinGecko is unavailable.
+ try{
+  const fallback=await getJson('https://api.coinpaprika.com/v1/tickers?quotes=USD',12000);
+  if(!Array.isArray(fallback)||!fallback.length)throw Error('CoinPaprika boş veri döndürdü.');
+  const mapped=fallback.map(c=>({id:c.id,name:c.name,symbol:c.symbol,image:'https://static.coinpaprika.com/coin/'+c.id+'/logo.png',current_price:Number(c.quotes?.USD?.price),market_cap:Number(c.quotes?.USD?.market_cap),market_cap_rank:Number(c.rank),total_volume:Number(c.quotes?.USD?.volume_24h),price_change_percentage_24h:Number(c.quotes?.USD?.percent_change_24h),ath:null})).filter(c=>Number.isFinite(c.current_price)).sort((a,b)=>(Number(a.market_cap_rank)||999999)-(Number(b.market_cap_rank)||999999)).slice(0,500);
+  if(mapped.length>=500)return mapped;
+  throw Error('CoinPaprika 500 coinlik listeyi tamamlayamadı.');
+ }catch(e){lastError=e}
+ // Last-resort availability fallback; market-cap rank is unavailable from Binance ticker data.
+ try{
+  const emergency=await getBinanceMarkets();
+  if(emergency.length)return emergency;
+  throw Error('Binance boş veri döndürdü.');
+ }catch(e){throw Error('500 coinlik piyasa listesi alınamadı. Son hata: '+(e?.message||lastError?.message||'bağlantı hatası'))}
 }
 function coinMarkup(c){const change=Number(c.price_change_percentage_24h),img=c.image&&/^https:\/\//.test(c.image)?c.image:'',on=favorites.has(c.id);return '<div class="coin-row" role="button" tabindex="0" data-coin="'+safe(c.id)+'"><div class="coin-left">'+(img?'<img class="coin-icon" loading="lazy" src="'+safe(img)+'" alt="">':'<span class="coin-icon">'+safe((c.symbol||'?').slice(0,3).toUpperCase())+'</span>')+'<div style="min-width:0"><div class="coin-name"><span class="rank">'+(c.market_cap_rank||'—')+'</span> '+safe(c.name)+'</div><div class="coin-symbol">'+safe((c.symbol||'').toUpperCase())+'</div></div></div><div class="coin-price">'+price(c.current_price)+'<div class="coin-change '+(change>0?'':'down')+'" style="color:'+(change>0?'var(--green)':change<0?'var(--red)':'var(--muted)')+'">'+pct(c.price_change_percentage_24h)+'</div></div><div class="row-right"><button class="star '+(on?'on':'')+'" data-star="'+safe(c.id)+'" aria-label="'+(on?'Favorilerden çıkar':'Favorilere ekle')+'" title="'+(on?'Favorilerden çıkar':'Favorilere ekle')+'">'+(on?'★':'☆')+'</button></div></div>'}
 let marketScrollY=0;function openAnalysis(id){const c=coins.find(x=>x.id===id);if(!c)return;marketScrollY=window.scrollY;const q=new URLSearchParams({embed:'1',v:'48',symbol:c.symbol||'',name:c.name||c.symbol||'Coin',image:c.image||''});const frame=$('analysisFrame');const analysisUrl='./analysis.html?'+q.toString();if(frame.dataset.loaded==='1'){try{frame.contentWindow.location.replace(analysisUrl)}catch(e){frame.src=analysisUrl}}else{frame.src=analysisUrl}frame.dataset.loaded='1';document.body.classList.add('coin-detail-open');history.pushState({vcryptoCoinDetail:true},'',location.pathname+location.search+'#coin-'+encodeURIComponent(c.symbol||c.id));setScreen('analysis')}function returnToMarket(){document.body.classList.remove('coin-detail-open');setScreen('market');requestAnimationFrame(()=>window.scrollTo(0,marketScrollY))}window.addEventListener('popstate',()=>{if(document.body.classList.contains('coin-detail-open'))returnToMarket()});
@@ -648,7 +654,7 @@ function setScreen(name){activeScreen=name;try{localStorage.setItem('vcryptoActi
 let patternSearchTimer=null;
 function renderPatternSearch(){
  const q=($('patternSearch')?.value||'').trim().toLowerCase();
- const list=coins.slice(0,100).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q));
+ const list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q));
  $('patternSearchRows').innerHTML=list.map(c=>'<button type="button" class="coin-row pattern-coin-row" data-pattern-id="'+safe(c.id)+'" style="width:100%;text-align:left;background:transparent;border-top:0;border-left:0;border-right:0;color:inherit"><span class="coin-left"><img class="coin-icon" src="'+safe(c.image||'./icon.svg')+'" alt="" onerror="this.src=\'./icon.svg\'"><span style="min-width:0"><span class="coin-name" style="display:block">'+safe(c.name)+'</span><span class="coin-symbol">'+safe(String(c.symbol||'').toUpperCase())+'</span></span></span><span style="color:var(--teal);font-size:22px;font-weight:900">›</span></button>').join('')||'<div class="empty">Coin bulunamadı.</div>';
  $('patternSearchRows').querySelectorAll('[data-pattern-id]').forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));
 }
@@ -816,51 +822,25 @@ function signalRowHtml(r){
  return '<div class="signal-row"><div><div class="signal-main">'+icon+'<div style="min-width:0"><div class="signal-name">'+safe(r.name)+' <span class="signal-meta">'+safe(r.symbol)+'</span></div><div class="signal-meta">Fiyat '+price(r.entryPrice)+' · '+(r.signal==='SAT'?'Düşüş hedefi ':'Yukarı hedef ') +price(r.targetPrice)+' · Stop '+price(r.stopPrice)+'</div></div></div><div class="signal-meter"><span style="width:'+width+'%;background:'+(r.signal==='AL'?'#21d6b0':r.signal==='SAT'?'#f6465d':'#9aa4b2')+'"></span></div><div class="signal-details">'+(r.signal==='SAT'?'Hedef düşüşü ':'Hedef potansiyeli ')+'<b>'+fmtSignalPct(r.targetReturn)+'</b> · Stop riski '+fmtSignalPct(-r.stopReturn)+' · Risk/getiri '+r.riskReward.toFixed(2)+'x · RSI '+r.rsi.toFixed(0)+' · '+(r.targetSource||'Teknik hedef')+'</div><div class="signal-details">'+(r.pattern?('Formasyon: <b>'+safe(r.pattern.name)+'</b> · '+safe(r.pattern.confidence)):'Formasyon: doğrulanmış kırılım yok')+'</div>'+(r.pattern?'<div class="signal-details">Formasyon hedefleri: <b>H1 '+price(r.pattern.targets[0])+'</b> · <b>H2 '+price(r.pattern.targets[1])+'</b> · <b>H3 '+price(r.pattern.targets[2])+'</b> · Formasyon stop '+price(r.pattern.stop)+'</div>':'')+'<div class="signal-details">Geçmiş test: '+(r.test.trades?fmtSignalPct(r.test.net):'yetersiz veri')+' · '+r.test.trades+' işlem · kazanma '+(r.test.trades?(r.test.winRate*100).toFixed(0)+'%':'—')+'</div></div><div class="signal-side"><span class="signal-badge '+cls+'">'+r.signal+'</span><div class="signal-price">'+(r.change>0?'+':'')+r.change.toFixed(2)+'% / 24s</div><div class="signal-price" style="color:'+(r.signal==='SAT'?'#f6465d':r.signal==='NÖTR'?'#9aa4b2':'#21d6b0')+'">'+(r.signal==='SAT'?'Düşüş hedefi ':'Hedef ')+fmtSignalPct(r.targetReturn)+'</div></div></div>'
 }
 async function loadSignalUniverse(){
- const minCap=250000000,byKey=new Map();
+ const bySymbol=new Map();
  const excluded=c=>!c.symbol||SIGNAL_EXCLUDE.has(String(c.symbol).toUpperCase())||['SSTN','PC0000031'].includes(String(c.symbol).toUpperCase())||String(c.name||'').toLowerCase().includes('rent financing platform')||String(c.name||'').toLowerCase().includes('tradable na')||!/^[A-Z0-9]{2,15}$/.test(String(c.symbol).toUpperCase());
- const add=c=>{
-  const cap=Number(c.market_cap),sym=String(c.symbol||'').toUpperCase();
-  if(!c||!c.id||!Number.isFinite(cap)||cap<minCap||excluded(c))return;
-  const key=sym;
-  const previous=byKey.get(key);
-  if(!previous||cap>Number(previous.market_cap))byKey.set(key,{...previous,...c,market_cap:cap,symbol:sym});
- };
- // Start with all loaded market data, then retrieve the full market-cap universe from CoinPaprika.
- coins.forEach(add);
- let paprikaLoaded=false;
- try{
-  const paprika=await getJson('https://api.coinpaprika.com/v1/tickers?quotes=USD');
-  if(Array.isArray(paprika)&&paprika.length){
-   paprika.forEach(c=>add({
-    id:'paprika:'+c.id,name:c.name,symbol:c.symbol,
-    image:'https://static.coinpaprika.com/coin/'+c.id+'/logo.png',
-    current_price:Number(c.quotes?.USD?.price),market_cap:Number(c.quotes?.USD?.market_cap),
-    market_cap_rank:Number(c.rank),total_volume:Number(c.quotes?.USD?.volume_24h),
-    price_change_percentage_24h:Number(c.quotes?.USD?.percent_change_24h),ath:null
-   }));
-   paprikaLoaded=true;
-  }
- }catch(e){}
- // CoinGecko pagination supplements the universe and avoids depending on its first page / top-20 list.
- let cgPages=0,cgReachedCutoff=false;
- for(let page=1;page<=10;page++){
-  try{
-   const batch=await getJson(API+'/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page='+page+'&sparkline=false&price_change_percentage=24h');
-   if(!Array.isArray(batch)||!batch.length){cgReachedCutoff=true;break}
-   batch.forEach(add);cgPages++;
-   if(Number(batch[batch.length-1]?.market_cap)<minCap){cgReachedCutoff=true;break}
-  }catch(e){break}
+ // Use the same first-500 market-cap universe as Piyasa; only skip assets unsuitable for spot signal calculations.
+ const ordered=coins.slice().sort((a,b)=>(Number(a.market_cap_rank)||999999)-(Number(b.market_cap_rank)||999999));
+ for(const coin of ordered){
+  const sym=String(coin.symbol||'').toUpperCase();
+  if(excluded(coin)||!coin.id||bySymbol.has(sym))continue;
+  bySymbol.set(sym,{...coin,symbol:sym});
+  if(bySymbol.size>=500)break;
  }
- if(!paprikaLoaded&&!cgPages)throw Error('CoinGecko ve CoinPaprika piyasa listelerine ulaşılamadı. Yeniden dene.');
- const result=Array.from(byKey.values()).sort((a,b)=>(Number(a.market_cap_rank)||999999)-(Number(b.market_cap_rank)||999999));
- if(!result.length)throw Error('Piyasa değeri 250 milyon $ üzerinde coin bulunamadı.');
+ const result=Array.from(bySymbol.values());
+ if(!result.length)throw Error('İlk 500 coinlik piyasa listesi yüklenemedi. Önce Piyasa verilerini yenile.');
  return result;
 }
 async function runSignalScan(force=false){
- if(signalBusy)return;signalBusy=true;signalInterval=$('signalTimeframe').value||'4h';$('signalRefresh').disabled=true;$('signalTimeframe').disabled=true;$('signalStatus').textContent='Taranıyor';$('signalTimeframeCaption').textContent='Piyasa değeri 250 milyon $ üzeri · '+SIGNAL_INTERVAL_LABELS[signalInterval]+' mumlar';$('signalError').style.display='none';$('signalRows').innerHTML='<div class="empty">250 milyon $ üzerindeki coinler bulunuyor; '+SIGNAL_INTERVAL_LABELS[signalInterval]+' mumları alınıyor ve eşikler geçmiş veride test ediliyor…</div>';
+ if(signalBusy)return;signalBusy=true;signalInterval=$('signalTimeframe').value||'4h';$('signalRefresh').disabled=true;$('signalTimeframe').disabled=true;$('signalStatus').textContent='Taranıyor';$('signalTimeframeCaption').textContent='Piyasa değerine göre ilk 500 coin · '+SIGNAL_INTERVAL_LABELS[signalInterval]+' mumlar';$('signalError').style.display='none';$('signalRows').innerHTML='<div class="empty">İlk 500 coin taranıyor; '+SIGNAL_INTERVAL_LABELS[signalInterval]+' mumları alınıyor ve eşikler geçmiş veride test ediliyor…</div>';
  try{
   const universe=await loadSignalUniverse();
-  if(!universe.length)throw Error('Piyasa değeri 250 milyon $ üzerinde uygun coin bulunamadı.');
+  if(!universe.length)throw Error('İlk 500 coin içinde sinyal hesaplamasına uygun coin bulunamadı.');
   const results=new Array(universe.length);let next=0;
   async function worker(){while(next<universe.length){const idx=next++,coin=universe[idx],sym=String(coin.symbol).toUpperCase();try{
    const raw=await getBinanceKlines(sym+'USDT',signalInterval,500);
