@@ -1006,3 +1006,34 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.
 /* v91: increase the overall UI scale by two steps while preserving the existing palette. */
 body{zoom:1.12}
 </style>
+
+<style>
+/* Cüzdanım içeriğini iki kademe daha büyüt; diğer sayfalara dokunma. */
+#screen-wallet .wallet-tab{font-size:21px!important}
+#screen-wallet .wallet-stat span{font-size:18px!important}
+#screen-wallet .wallet-stat strong{font-size:29px!important}
+#screen-wallet .wallet-stat small{font-size:17px!important}
+#screen-wallet .wallet-btn{font-size:19px!important;padding:15px 16px!important}
+#screen-wallet .wallet-field label{font-size:18px!important}
+#screen-wallet .wallet-field input,
+#screen-wallet .wallet-field select,
+#screen-wallet .wallet-field textarea{font-size:19px!important;padding:15px!important}
+#screen-wallet .wallet-table{font-size:18px!important}
+#screen-wallet .wallet-table th,
+#screen-wallet .wallet-table td{padding:14px 10px!important}
+#screen-wallet .wallet-coin-option b{font-size:19px!important}
+#screen-wallet .wallet-coin-option small{font-size:17px!important}
+#screen-wallet .wallet-coin-option>span:last-child{font-size:20px!important}
+#screen-wallet .wallet-legend-row{font-size:18px!important}
+#screen-wallet .wallet-notice,
+#screen-wallet .wallet-muted{font-size:17px!important}
+#screen-wallet .wallet-donut-label{font-size:17px!important}
+#screen-wallet .wallet-donut-label strong{font-size:20px!important}
+#screen-wallet .wallet-empty{font-size:18px!important}
+#screen-wallet .wallet-total-tl{font-size:18px!important}
+@media(max-width:500px){
+ #screen-wallet .wallet-stat strong{font-size:29px!important}
+ #screen-wallet .wallet-tab{font-size:21px!important}
+}
+</style>
+
