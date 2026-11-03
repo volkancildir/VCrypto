@@ -737,8 +737,13 @@ async function loadPatternCard(btn,token=patternScanToken){
   let item=patternCardCache.get(cacheKey);
   if(item&&Date.now()-(item.savedAt||0)>=15*60*1000){patternCardCache.delete(cacheKey);item=null}
   if(!item){
-   let raw=await readPatternCache(cacheKey);
+   let raw=null;
+   if(window.AndroidPatternBridge){
+    try{const nativeRaw=window.AndroidPatternBridge.getPatternCache(cacheKey);if(nativeRaw)raw=JSON.parse(nativeRaw)}catch(e){}
+   }
+   if(!raw)raw=await readPatternCache(cacheKey);
    if(!raw){raw=await getBinanceKlines(symbol+'USDT',cfg.interval,cfg.limit);await writePatternCache(cacheKey,raw)}
+   if(window.AndroidPatternBridge&&raw){try{window.AndroidPatternBridge.putPatternCache(cacheKey,JSON.stringify(raw))}catch(e){}}
    const candles=raw.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));
    item={raw,candles,patterns:window.VCryptoPatternEngine.scan(candles),savedAt:Date.now()};patternCardCache.set(cacheKey,item)
   }
@@ -759,7 +764,7 @@ async function runPatternScan(buttons,token){const status=$('patternScanStatus')
 function startPatternAutoRefresh(){if(patternAutoRefreshTimer)return;patternAutoRefreshTimer=setInterval(()=>{if(document.visibilityState!=='visible'||activeScreen!=='pattern')return;if(Date.now()-patternLastRefreshAt>=15*60*1000)renderPatternSearch()},30000)}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&activeScreen==='pattern'&&patternLastRefreshAt&&Date.now()-patternLastRefreshAt>=15*60*1000)renderPatternSearch()});
 startPatternAutoRefresh();
-function renderPatternSearch(){const token=++patternScanToken,q=($('patternSearch')?.value||'').trim().toLowerCase(),list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q)),selected=list.slice(0,500);$('patternSearchRows').innerHTML=selected.map(patternCardMarkup).join('')||'<div class="empty">Coin bulunamadı.</div>';const buttons=[...$('patternSearchRows').querySelectorAll('[data-pattern-id]')];buttons.forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));const status=$('patternScanStatus');if(status)status.textContent=patternTfConfig[patternTimeframe].label+' verileri taranıyor; kartlar hedef yüzdesine göre sıralanacak…';runPatternScan(buttons,token)}
+function renderPatternSearch(){const token=++patternScanToken,q=($('patternSearch')?.value||'').trim().toLowerCase(),list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q)),selected=list.slice(0,500);$('patternSearchRows').innerHTML=selected.map(patternCardMarkup).join('')||'<div class="empty">Coin bulunamadı.</div>';const buttons=[...$('patternSearchRows').querySelectorAll('[data-pattern-id]')];buttons.forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));if(window.AndroidPatternBridge){try{const symbols=selected.map(c=>String(c.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'')+'USDT');window.AndroidPatternBridge.saveWatchlist(patternTimeframe,symbols.join(','))}catch(e){}}const status=$('patternScanStatus');if(status)status.textContent=patternTfConfig[patternTimeframe].label+' verileri taranıyor; kartlar hedef yüzdesine göre sıralanacak…';runPatternScan(buttons,token)}
 function openPatternCoin(id){
  const coin=coins.find(c=>c.id===id);if(!coin)return;
  const sym=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
