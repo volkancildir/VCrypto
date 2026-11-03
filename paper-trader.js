@@ -52,15 +52,13 @@ function mount(){
  '<div class="paper-metric"><span>Açık pozisyon değeri</span><strong id="paperExposure">₺0,00</strong></div>'+
  '</div>'+
  '<div class="paper-rowtop"><div class="paper-sub" id="paperReturn">Getiri: %0,00 · Gerçekleşen: ₺0,00 · Açık kâr/zarar: ₺0,00</div></div>'+
- '<div class="paper-actions"><button type="button" id="paperToggle">▶ Simülasyonu başlat</button><button type="button" class="secondary" id="paperScan">↻ Şimdi tara</button><button type="button" class="secondary" id="paperReset">Sıfırla</button></div>'+
+ '<div class="paper-actions"><span class="tag">☁ GitHub Actions · otomatik</span></div>'+
  '<div class="paper-status" id="paperProgress">İlk tarama başlatıldığında ilk 500 coin 4 saatlik ve günlük mumlarda incelenecek.</div>'+
  '<div class="paper-section">Açık işlemler <span id="paperPositionCount" style="color:#8ca1b7"></span></div><div id="paperPositions"><div class="paper-empty">Henüz açık sanal işlem yok.</div></div>'+
  '<div class="paper-section">Son kapanan işlemler</div><div id="paperHistory"><div class="paper-empty">Henüz işlem geçmişi yok.</div></div>'+
- '<p class="paper-note">Kurallar: yalnızca AL sinyali + yukarı yönlü formasyon birlikteyse alım; SAT sinyali, aşağı yönlü formasyon, hedef veya zarar-kes seviyesinde çıkış. Açığa satış yok. İşlem başına portföyün en fazla %1’i riske edilir; tek pozisyon portföyün %20’sini, toplam açık pozisyon sayısı 5’i aşmaz. Alış ve satışta ayrı ayrı %0,10 varsayımsal maliyet düşülür. Mum kapanışları esas alınır. Simülasyon bu cihazın tarayıcı hafızasında saklanır; uygulama kapalıyken arka planda çalışmaz, tekrar açıldığında yeni kapanmış mumları tarar.</p>';
+ '<p class="paper-note">Kurallar: yalnızca AL sinyali + yukarı yönlü formasyon birlikteyse alım; SAT sinyali, aşağı yönlü formasyon, hedef veya zarar-kes seviyesinde çıkış. Açığa satış yok. İşlem başına portföyün en fazla %1’i riske edilir; tek pozisyon portföyün %20’sini, toplam açık pozisyon sayısı 5’i aşmaz. Alış ve satışta ayrı ayrı %0,10 varsayımsal maliyet düşülür. Mum kapanışları esas alınır. Portföy GitHub üzerinde saklanır. GitHub Actions yaklaşık 5 dakikada bir canlı fiyatları kontrol eder; 4 saatlik ve günlük strateji sinyallerini mum kapanışında işler. Uygulamayı kapatsan da sunucu tarafında devam eder.</p>';
  anchor.insertAdjacentElement('afterend',box);
- $('paperToggle').addEventListener('click',toggle);
- $('paperScan').addEventListener('click',()=>scanAll(true));
- $('paperReset').addEventListener('click',reset);
+
  render();
 }
 async function getFx(){
@@ -89,8 +87,7 @@ function render(){
   return '<article class="paper-position"><div class="paper-rowtop"><span class="paper-symbol">'+esc(p.symbol)+'</span><strong class="'+(u>=0?'paper-positive':'paper-negative')+'">'+fmt(u)+' ('+pct(ret)+')</strong></div><div class="paper-meta">'+(p.timeframe==='4h'?'4 saatlik':'Günlük')+' · '+esc(p.pattern||'Formasyon')+'<br>Giriş '+usd(p.entry)+' · Son '+usd(p.lastPrice)+'<br>Hedef '+usd(p.target)+' · Stop '+usd(p.stop)+' · Pozisyon '+fmt(value)+'</div></article>'
  }).join(''):'<div class="paper-empty">Henüz açık sanal işlem yok.</div>';
  $('paperHistory').innerHTML=state.trades.length?state.trades.slice(-12).reverse().map(t=>'<article class="paper-trade"><div class="paper-rowtop"><span class="paper-symbol">'+esc(t.symbol)+' · '+(t.timeframe==='4h'?'4 saat':'1 gün')+'</span><strong class="'+(t.pnl>=0?'paper-positive':'paper-negative')+'">'+fmt(t.pnl)+' ('+pct(t.returnPct)+')</strong></div><div class="paper-meta">'+esc(t.reason)+' · Giriş '+usd(t.entry)+' → Çıkış '+usd(t.exit)+'<br>'+new Date(t.closedAt).toLocaleString('tr-TR')+'</div></article>').join(''):'<div class="paper-empty">Henüz işlem geçmişi yok.</div>';
- $('paperToggle').textContent=state.active?'Ⅱ Simülasyonu durdur':'▶ Simülasyonu başlat';
- $('paperToggle').disabled=busy;$('paperScan').disabled=busy;$('paperReset').disabled=busy;
+
  if(state.lastUpdate)$('paperProgress').textContent='Son tarama: '+new Date(state.lastUpdate).toLocaleString('tr-TR')+' · Kur: 1 TL = '+(fx||0).toFixed(5)+' USD';
 }
 function markPosition(p,price){if(Number(price)>0)p.lastPrice=Number(price)}
@@ -212,6 +209,7 @@ async function latestClosedTime(interval){
  return 0;
 }
 async function autoCheck(){
+ return;
  if(!state.active||busy||(typeof signalBusy!=='undefined'&&signalBusy))return;
  try{
   const [t4,td]=await Promise.all([latestClosedTime('4h'),latestClosedTime('1d')]);
@@ -219,16 +217,29 @@ async function autoCheck(){
   if(due)await scanAll(true);
  }catch(e){}
 }
+async function syncCloud(){
+ try{
+  const r=await fetch('./paper-portfolio.json?ts='+Date.now(),{cache:'no-store'});
+  if(!r.ok)throw Error('Sunucu portföyü okunamadı (HTTP '+r.status+')');
+  const cloud=await r.json();
+  state={...fresh(),...cloud,positions:Array.isArray(cloud.positions)?cloud.positions:[],trades:Array.isArray(cloud.trades)?cloud.trades:[],lastBars:cloud.lastBars||{},scanBars:cloud.scanBars||{}};
+  fx=Number(cloud.fxRate)||fx;
+  state.lastUpdate=cloud.updatedAt?new Date(cloud.updatedAt).getTime():null;
+  render();
+  status(cloud.updatedAt?'GitHub Actions aktif · son güncelleme '+new Date(cloud.updatedAt).toLocaleString('tr-TR'):'GitHub Actions ilk çalışmasını bekliyor.');
+  const p=$('paperProgress');if(p)p.textContent='Sunucu simülasyonu aktif. Telefon kapalıyken de GitHub Actions üzerinden çalışır. Son sunucu kontrolü: '+(cloud.updatedAt?new Date(cloud.updatedAt).toLocaleString('tr-TR'):'henüz yapılmadı')+'.';
+ }catch(e){status('Bulut portföyüne bağlanılamadı: '+e.message)}
+}
 function startAuto(){
  clearInterval(autoTimer);
- autoTimer=setInterval(autoCheck,60000);
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoCheck()});
- window.addEventListener('focus',autoCheck);
+ syncCloud();
+ autoTimer=setInterval(syncCloud,60000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncCloud()});
+ window.addEventListener('focus',syncCloud);
 }
 function init(){
  injectStyles();mount();startAuto();
- if(state.active){status('Simülasyon aktif; son kapanan mumlar kontrol ediliyor.');setTimeout(autoCheck,1800)}
- document.querySelectorAll('.nav-item[data-screen="signal"]').forEach(b=>b.addEventListener('click',()=>{if(state.active)setTimeout(autoCheck,1800)}));
+ document.querySelectorAll('.nav-item[data-screen="signal"]').forEach(b=>b.addEventListener('click',()=>syncCloud()));
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
