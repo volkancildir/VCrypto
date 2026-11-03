@@ -18,10 +18,129 @@ function analyze(candles,E){const series=E.buildSignalSeries(candles),opt=E.opti
 function allowed(strategy,a){const bull=!!(a.pattern&&a.pattern.direction===1);if(strategy==='alSat')return a.alSignal==='AL';if(strategy==='formasyon')return bull;if(strategy==='birlesik')return a.alSignal==='AL'&&bull;return false}
 function shouldExit(strategy,a){if(strategy==='alSat')return a.alSignal==='SAT';if(strategy==='formasyon')return !!(a.pattern&&a.pattern.direction===-1);return a.alSignal==='SAT'||!!(a.pattern&&a.pattern.direction===-1)}
 function levels(strategy,a,entry){let stop=strategy!=='alSat'&&a.pattern?Number(a.pattern.stop):a.atrStop,target=strategy!=='alSat'&&a.pattern&&a.pattern.targets?Number(a.pattern.targets[0]):a.atrTarget;if(!(stop>0&&stop<entry))stop=entry-1.5*a.atr;if(!(target>entry))target=entry+2*a.atr;return {stop,target}}
-async function main(){const s=readState(),E=await engine(),rate=await fxRate();s.fxRate=rate;
- const activePositions=STRATEGIES.flatMap(k=>s.strategies[k].positions.map(p=>({...p,_book:k})));
- if(activePositions.length){const tickers=await binance('ticker/price'),map=new Map(tickers.filter(t=>t.symbol.endsWith('USDT')).map(t=>[t.symbol.slice(0,-4),Number(t.price)]));for(const p of activePositions){const b=s.strategies[p._book],live=map.get(p.symbol),pos=b.positions.find(x=>x.id===p.id);if(!pos||!(live>0))continue;pos.lastPrice=live;if(live<=pos.stop)closePos(b,pos,pos.stop,'Zarar-kes (canlı fiyat kontrolü)',rate);else if(live>=pos.target)closePos(b,pos,pos.target,'Hedef (canlı fiyat kontrolü)',rate)}}
- const btc4=await binance('klines?symbol=BTCUSDT&interval=4h&limit=3'),btcd=await binance('klines?symbol=BTCUSDT&interval=1d&limit=3'),closed4=Number(btc4[btc4.length-2][0]),closedD=Number(btcd[btcd.length-2][0]),due4=closed4>Number(s.scanBars['4h']||0),dueD=closedD>Number(s.scanBars['1d']||0);
- if(due4||dueD){const coins=await universe();console.log('Universe',coins.length,'4h',due4,'1d',dueD);for(const interval of ['4h','1d']){if((interval==='4h'&&!due4)||(interval==='1d'&&!dueD))continue;let next=0,opened=0,closed=0,failed=0;async function worker(){while(next<coins.length){const coin=coins[next++],symbol=coin.symbol,key=interval+'|'+symbol;try{const raw=await binance('klines?symbol='+symbol+'USDT&interval='+interval+'&limit=500');if(!Array.isArray(raw)||raw.length<110){failed++;continue}const candles=raw.slice(0,-1).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})),last=candles[candles.length-1],isNew=last.t>Number(s.lastBars[key]||0);for(const strategy of STRATEGIES){const b=s.strategies[strategy],pos=b.positions.find(p=>p.symbol===symbol&&p.timeframe===interval);if(pos){pos.lastPrice=last.c;if(isNew){const hitT=last.h>=pos.target,hitS=last.l<=pos.stop;if(hitT&&hitS){closePos(b,pos,pos.stop,'Aynı mumda hedef ve stop: stop varsayıldı',rate);closed++}else if(hitS){closePos(b,pos,pos.stop,'Zarar-kes',rate);closed++}else if(hitT){closePos(b,pos,pos.target,'Hedef gerçekleşti',rate);closed++}else{const a=analyze(candles,E);if(a&&shouldExit(strategy,a)){closePos(b,pos,last.c,strategy==='alSat'?'SAT sinyali':strategy==='formasyon'?'Aşağı yönlü formasyon':'SAT veya aşağı yönlü formasyon',rate);closed++}}}}else if(isNew&&b.positions.length<MAX_POSITIONS&&!b.positions.some(p=>p.symbol===symbol)){const a=analyze(candles,E);if(a&&allowed(strategy,a)){const tick=await binance('ticker/price?symbol='+symbol+'USDT'),entry=Number(tick.price);const lv=levels(strategy,a,entry),total=equity(b,rate),riskUsd=total*RISK*rate,allocUsd=total*MAX_ALLOC*rate,cashUsd=b.cash*rate,qty=Math.min(riskUsd/Math.max(entry-lv.stop,entry*.0005),allocUsd/entry,cashUsd/(entry*(1+FEE))),costTL=qty*entry/rate*(1+FEE);if(qty>0&&Number.isFinite(costTL)&&costTL<=b.cash){b.cash-=costTL;b.positions.push({id:strategy+'-'+interval+'-'+symbol+'-'+last.t,strategy,symbol,name:coin.name,timeframe:interval,qty,entry,lastPrice:entry,target:lv.target,stop:lv.stop,costTL,pattern:a.pattern&&a.pattern.name|| (strategy==='alSat'?'Al/Sat sinyali':'Yükseliş formasyonu'),openedAt:Date.now(),entryBar:last.t});opened++}}}}}if(isNew)s.lastBars[key]=last.t}catch(e){failed++;if(failed<5)console.log(symbol,e.message)}}}await Promise.all(Array.from({length:6},worker));s.scanBars[interval]=interval==='4h'?closed4:closedD;console.log(interval,{opened,closed,failed})}}
- s.updatedAt=new Date().toISOString();s.active=true;s.summary={equityTL:STRATEGIES.reduce((v,k)=>v+equity(s.strategies[k],rate),0),pnlTL:STRATEGIES.reduce((v,k)=>v+equity(s.strategies[k],rate)-START,0),returnPct:(STRATEGIES.reduce((v,k)=>v+equity(s.strategies[k],rate),0)/30000-1)*100,openPositions:STRATEGIES.reduce((v,k)=>v+s.strategies[k].positions.length,0)};for(const k of STRATEGIES){const b=s.strategies[k],eq=equity(b,rate);b.summary={equityTL:eq,pnlTL:eq-START,returnPct:(eq/START-1)*100,realizedTL:b.trades.reduce((v,t)=>v+t.pnl,0),openPositions:b.positions.length,cashTL:b.cash,exposureTL:b.positions.reduce((v,p)=>v+p.qty*p.lastPrice/rate*(1-FEE),0)}}fs.writeFileSync(STATE_FILE,JSON.stringify(s,null,2)+'\n');console.log('Saved state',s.summary)}
+async function main(){
+ const s=readState();
+ const E=await engine();
+ const rate=await fxRate();
+ s.fxRate=rate;
+
+ // Live target/stop checks are independent for each virtual account.
+ const tickers=await binance('ticker/price');
+ const livePrices=new Map(tickers.filter(t=>t.symbol.endsWith('USDT')).map(t=>[t.symbol.slice(0,-4),Number(t.price)]));
+ for(const strategy of STRATEGIES){
+  const book=s.strategies[strategy];
+  for(const pos of [...book.positions]){
+   const live=livePrices.get(pos.symbol);
+   if(!(live>0))continue;
+   pos.lastPrice=live;
+   if(live<=pos.stop)closePos(book,pos,pos.stop,'Zarar-kes (canlı fiyat kontrolü)',rate);
+   else if(live>=pos.target)closePos(book,pos,pos.target,'Hedef (canlı fiyat kontrolü)',rate);
+  }
+ }
+
+ const btc4=await binance('klines?symbol=BTCUSDT&interval=4h&limit=3');
+ const btcd=await binance('klines?symbol=BTCUSDT&interval=1d&limit=3');
+ const closed4=Number(btc4[btc4.length-2][0]);
+ const closedD=Number(btcd[btcd.length-2][0]);
+ const due4=closed4>Number(s.scanBars['4h']||0);
+ const dueD=closedD>Number(s.scanBars['1d']||0);
+
+ if(due4||dueD){
+  const coins=await universe();
+  console.log('Universe',coins.length,'4h',due4,'1d',dueD);
+  for(const interval of ['4h','1d']){
+   if((interval==='4h'&&!due4)||(interval==='1d'&&!dueD))continue;
+   let next=0,opened=0,closed=0,failed=0;
+   async function worker(){
+    while(next<coins.length){
+     const coin=coins[next++];
+     const symbol=coin.symbol;
+     const key=interval+'|'+symbol;
+     try{
+      const raw=await binance('klines?symbol='+symbol+'USDT&interval='+interval+'&limit=500');
+      if(!Array.isArray(raw)||raw.length<110){failed++;continue}
+      const candles=raw.slice(0,-1).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
+      const last=candles[candles.length-1];
+      const isNew=last.t>Number(s.lastBars[key]||0);
+      for(const strategy of STRATEGIES){
+       const book=s.strategies[strategy];
+       let pos=book.positions.find(p=>p.symbol===symbol&&p.timeframe===interval);
+       if(pos){
+        pos.lastPrice=last.c;
+        if(!isNew)continue;
+        const hitTarget=last.h>=pos.target;
+        const hitStop=last.l<=pos.stop;
+        if(hitTarget&&hitStop){closePos(book,pos,pos.stop,'Aynı mumda hedef ve stop: stop varsayıldı',rate);closed++;continue}
+        if(hitStop){closePos(book,pos,pos.stop,'Zarar-kes',rate);closed++;continue}
+        if(hitTarget){closePos(book,pos,pos.target,'Hedef gerçekleşti',rate);closed++;continue}
+        const analysis=analyze(candles,E);
+        if(analysis&&shouldExit(strategy,analysis)){
+         const reason=strategy==='alSat'?'SAT sinyali':strategy==='formasyon'?'Aşağı yönlü formasyon':'SAT veya aşağı yönlü formasyon';
+         closePos(book,pos,last.c,reason,rate);
+         closed++;
+        }
+        continue;
+       }
+       if(!isNew||book.positions.length>=MAX_POSITIONS||book.positions.some(p=>p.symbol===symbol))continue;
+       const analysis=analyze(candles,E);
+       if(!analysis||!allowed(strategy,analysis))continue;
+       const ticker=await binance('ticker/price?symbol='+symbol+'USDT');
+       const entry=Number(ticker.price);
+       if(!(entry>0))continue;
+       const lv=levels(strategy,analysis,entry);
+       const total=equity(book,rate);
+       const riskUsd=total*RISK*rate;
+       const allocUsd=total*MAX_ALLOC*rate;
+       const cashUsd=book.cash*rate;
+       const qty=Math.min(
+        riskUsd/Math.max(entry-lv.stop,entry*.0005),
+        allocUsd/entry,
+        cashUsd/(entry*(1+FEE))
+       );
+       const costTL=qty*entry/rate*(1+FEE);
+       if(!(qty>0)||!Number.isFinite(costTL)||costTL>book.cash)continue;
+       book.cash-=costTL;
+       book.positions.push({
+        id:strategy+'-'+interval+'-'+symbol+'-'+last.t,
+        strategy,symbol,name:coin.name,timeframe:interval,qty,entry,lastPrice:entry,
+        target:lv.target,stop:lv.stop,costTL,
+        pattern:analysis.pattern&&analysis.pattern.name||(strategy==='alSat'?'Al/Sat sinyali':'Yükseliş formasyonu'),
+        openedAt:Date.now(),entryBar:last.t
+       });
+       opened++;
+      }
+      if(isNew)s.lastBars[key]=last.t;
+     }catch(e){
+      failed++;
+      if(failed<5)console.log(symbol,e.message);
+     }
+    }
+   }
+   await Promise.all(Array.from({length:6},worker));
+   s.scanBars[interval]=interval==='4h'?closed4:closedD;
+   console.log(interval,{opened,closed,failed});
+  }
+ }
+
+ s.updatedAt=new Date().toISOString();
+ s.active=true;
+ let totalEquity=0,totalPnl=0,totalOpen=0;
+ for(const strategy of STRATEGIES){
+  const book=s.strategies[strategy];
+  const value=equity(book,rate);
+  const pnl=value-START;
+  totalEquity+=value;
+  totalPnl+=pnl;
+  totalOpen+=book.positions.length;
+  book.summary={
+   equityTL:value,pnlTL:pnl,returnPct:(value/START-1)*100,
+   realizedTL:book.trades.reduce((sum,t)=>sum+t.pnl,0),
+   openPositions:book.positions.length,cashTL:book.cash,
+   exposureTL:book.positions.reduce((sum,p)=>sum+p.qty*p.lastPrice/rate*(1-FEE),0)
+  };
+ }
+ s.summary={equityTL:totalEquity,pnlTL:totalPnl,returnPct:(totalEquity/30000-1)*100,openPositions:totalOpen};
+ fs.writeFileSync(STATE_FILE,JSON.stringify(s,null,2)+'\n');
+ console.log('Saved state',s.summary);
+}
 main().catch(e=>{console.error(e);process.exit(1)});
