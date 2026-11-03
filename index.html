@@ -716,7 +716,7 @@ async function readPatternCache(key){
 async function writePatternCache(key,raw){
  const db=await openPatternCacheDb();if(!db)return;
  return new Promise(resolve=>{
-  try{const tx=db.transaction('klines','readwrite');tx.objectStore('klines').put({key,raw,expiresAt:Date.now()+15*60*1000,savedAt:Date.now()});tx.oncomplete=()=>resolve();tx.onerror=()=>resolve();tx.onabort=()=>resolve();
+  try{const tx=db.transaction('klines','readwrite');tx.objectStore('klines').put({key,raw,expiresAt:Date.now()+5*60*1000,savedAt:Date.now()});tx.oncomplete=()=>resolve();tx.onerror=()=>resolve();tx.onabort=()=>resolve();
   }catch(e){resolve()}
  });
 }
