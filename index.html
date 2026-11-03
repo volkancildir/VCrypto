@@ -770,7 +770,7 @@ function detectChartPattern(candles){
  const results=[];
  const add=(name,direction,targets,stop,confidence,priority=1)=>{
   const qualityScore=quality(direction);
-  if(qualityScore<62||!volConfirm||bodyRatio<.25||(direction===1?closeLocation<.55:closeLocation>.45))return;
+  if(!volConfirm||bodyRatio<.25||(direction===1?closeLocation<.55:closeLocation>.45))return;
   results.push({name,direction,breakout:close,targets,stop,confidence:confidence+' · Kalite '+qualityScore+'/100',qualityScore,priority});
  };
  // Triangles: use converging regression edges and require a close outside the edge plus volume.
