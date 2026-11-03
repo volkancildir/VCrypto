@@ -751,10 +751,28 @@ function detectChartPattern(candles){
  const hh=h.slice(start,end),ll=l.slice(start,end),cc=c.slice(start,end),vv=v.slice(start,end);
  if(hh.length<35)return null;
  const max=(a)=>Math.max(...a),min=(a)=>Math.min(...a),mean=(a)=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length);
- const slope=(a)=>linearSlope(a),range=max(hh)-min(ll),avgVol=mean(vv.slice(-20)),volConfirm=avgVol>0&&v[end]>=avgVol*1.05;
+ const slope=(a)=>linearSlope(a),range=max(hh)-min(ll),avgVol=mean(vv.slice(-20)),volRatio=avgVol>0?v[end]/avgVol:0;
+ const candleRange=Math.max(h[end]-l[end],1e-12),bodyRatio=Math.abs(c[end]-candles[end].o)/candleRange,closeLocation=(c[end]-l[end])/candleRange;
+ const ema=(arr,p)=>{const k=2/(p+1);let z=arr.slice(0,p).reduce((x,y)=>x+y,0)/p;for(let q=p;q<arr.length;q++)z=arr[q]*k+z*(1-k);return z};
+ const e20=c.length>=20?ema(c,20):close,e50=c.length>=50?ema(c,50):close;
+ const changes=[];for(let q=Math.max(1,c.length-15);q<c.length;q++)changes.push(c[q]-c[q-1]);
+ const gains=mean(changes.map(x=>Math.max(0,x))),losses=mean(changes.map(x=>Math.max(0,-x))),rsi=losses===0?100:100-100/(1+gains/losses);
+ const volConfirm=volRatio>=1.2;
+ const quality=(direction)=>{
+  const volumeScore=Math.max(0,Math.min(100,(volRatio-1)*100/0.8));
+  const bodyScore=Math.max(0,Math.min(100,bodyRatio*125));
+  const closeScore=Math.max(0,Math.min(100,(direction===1?closeLocation:1-closeLocation)*125));
+  const trendScore=(direction===1?(e20>e50&&close>e20):(e20<e50&&close<e20))?100:0;
+  const rsiScore=direction===1?(rsi>=50&&rsi<=75?100:rsi>75?45:20):(rsi<=50&&rsi>=25?100:rsi<25?45:20);
+  return Math.round(volumeScore*.25+bodyScore*.20+closeScore*.20+trendScore*.20+rsiScore*.15);
+ };
  if(!(range>0))return null;
  const results=[];
- const add=(name,direction,targets,stop,confidence,priority=1)=>results.push({name,direction,breakout:close,targets,stop,confidence,priority});
+ const add=(name,direction,targets,stop,confidence,priority=1)=>{
+  const qualityScore=quality(direction);
+  if(qualityScore<62||!volConfirm||bodyRatio<.25||(direction===1?closeLocation<.55:closeLocation>.45))return;
+  results.push({name,direction,breakout:close,targets,stop,confidence:confidence+' · Kalite '+qualityScore+'/100',qualityScore,priority});
+ };
  // Triangles: use converging regression edges and require a close outside the edge plus volume.
  const hs=slope(hh),ls=slope(ll),upper=hh[0]+hs*(hh.length-1),lower=ll[0]+ls*(ll.length-1);
  if(hs<0&&ls>0){
@@ -813,7 +831,7 @@ function detectChartPattern(candles){
   }
  }
  if(!results.length)return null;
- return results.sort((a,b)=>b.priority-a.priority)[0]
+ return results.sort((a,b)=>b.qualityScore-a.qualityScore||b.priority-a.priority)[0]
 }
 function fmtSignalPct(v){return (v>0?'+':'')+(v*100).toFixed(2)+'%'}
 function signalRowHtml(r){
@@ -844,7 +862,7 @@ async function runSignalScan(force=false){
   const results=new Array(universe.length);let next=0;
   async function worker(){while(next<universe.length){const idx=next++,coin=universe[idx],sym=String(coin.symbol).toUpperCase();try{
    const raw=await getBinanceKlines(sym+'USDT',signalInterval,500);
-   const candles=raw.map(k=>({t:Number(k[0]),o:Number(k[1]),h:Number(k[2]),l:Number(k[3]),c:Number(k[4]),v:Number(k[5])})).filter(k=>[k.o,k.h,k.l,k.c,k.v].every(Number.isFinite));
+   const candles=raw.slice(0,-1).map(k=>({t:Number(k[0]),o:Number(k[1]),h:Number(k[2]),l:Number(k[3]),c:Number(k[4]),v:Number(k[5])})).filter(k=>[k.o,k.h,k.l,k.c,k.v].every(Number.isFinite));
    const series=buildSignalSeries(candles),opt=optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)throw Error('indicator unavailable');
    const entryPrice=series.c[i];
    const pattern=detectChartPattern(candles);
