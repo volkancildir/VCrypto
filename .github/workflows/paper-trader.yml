@@ -9,6 +9,17 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+    inputs:
+      reset_strategy:
+        description: 'Sıfırlanacak strateji (none = sıfırlama yok)'
+        required: true
+        type: choice
+        default: none
+        options:
+          - none
+          - alSat
+          - formasyon
+          - birlesik
 
 permissions:
   contents: write
@@ -31,6 +42,8 @@ jobs:
         with:
           node-version: 20
       - name: Run paper trading simulation
+        env:
+          RESET_STRATEGY: ${{ inputs.reset_strategy }}
         run: node paper-trader-worker.js
       - name: Save portfolio state
         run: |
