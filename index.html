@@ -735,11 +735,12 @@ async function loadPatternCard(btn,token=patternScanToken){
  const symbol=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,''),cfg=patternTfConfig[patternTimeframe]||patternTfConfig['4h'],cacheKey=patternTimeframe+':'+symbol;
  try{
   let item=patternCardCache.get(cacheKey);
+  if(item&&Date.now()-(item.savedAt||0)>=15*60*1000){patternCardCache.delete(cacheKey);item=null}
   if(!item){
    let raw=await readPatternCache(cacheKey);
-   if(!raw){raw=await getBinanceKlines(symbol+'USDT',cfg.interval,cfg.limit);writePatternCache(cacheKey,raw)}
+   if(!raw){raw=await getBinanceKlines(symbol+'USDT',cfg.interval,cfg.limit);await writePatternCache(cacheKey,raw)}
    const candles=raw.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));
-   item={raw,candles,patterns:window.VCryptoPatternEngine.scan(candles)};patternCardCache.set(cacheKey,item)
+   item={raw,candles,patterns:window.VCryptoPatternEngine.scan(candles),savedAt:Date.now()};patternCardCache.set(cacheKey,item)
   }
   if(token!==patternScanToken)return;
   const {candles,patterns}=item,last=candles[candles.length-1];if(!last||candles.length<30)throw Error('Yeterli mum verisi yok');
@@ -753,7 +754,11 @@ async function loadPatternCard(btn,token=patternScanToken){
   box.innerHTML='<span class="pattern-result-name">'+safe(p.name)+'</span><span class="pattern-result-direction '+cls+'">'+(dir>0?'Yukarı yönlü':dir<0?'Aşağı yönlü':'Yönsüz')+'</span><span class="pattern-result-meta">'+(p.confirmed?'Teyitli yapı':'Teyit bekliyor')+' · Tespit puanı '+p.score+'/5 · '+cfg.label+'</span>'+levels+'<span class="pattern-result-meta">'+safe(p.detail)+'</span>';sortPatternCards();
  }catch(err){if(token!==patternScanToken)return;btn.dataset.targetPct='-1';box.innerHTML='<span class="pattern-result-state">Bu zaman diliminde veri alınamadı</span>';btn.querySelector('[data-expected-move]').textContent='—';sortPatternCards()}
 }
-async function runPatternScan(buttons,token){const status=$('patternScanStatus');let next=0,done=0;const workers=Array.from({length:5},async()=>{while(next<buttons.length&&token===patternScanToken){const btn=buttons[next++];await loadPatternCard(btn,token);done++;if(status&&token===patternScanToken)status.textContent=patternTfConfig[patternTimeframe].label+' taraması: '+done+'/'+buttons.length+' coin · hedef yüzdesine göre sıralanıyor.'}});await Promise.all(workers);if(status&&token===patternScanToken)status.textContent=buttons.length+' coin tarandı · Hedef 2 yüzdesi yüksekten düşüğe sıralandı.';sortPatternCards()}
+let patternLastRefreshAt=0,patternAutoRefreshTimer=null;
+async function runPatternScan(buttons,token){const status=$('patternScanStatus');let next=0,done=0;const workers=Array.from({length:5},async()=>{while(next<buttons.length&&token===patternScanToken){const btn=buttons[next++];await loadPatternCard(btn,token);done++;if(status&&token===patternScanToken)status.textContent=patternTfConfig[patternTimeframe].label+' taraması: '+done+'/'+buttons.length+' coin · hedef yüzdesine göre sıralanıyor.'}});await Promise.all(workers);if(token===patternScanToken){patternLastRefreshAt=Date.now();if(status)status.textContent=buttons.length+' coin tarandı · Hedef 2 yüzdesine göre sıralandı. Sonraki yenileme 15 dakika içinde.'}sortPatternCards()}
+function startPatternAutoRefresh(){if(patternAutoRefreshTimer)return;patternAutoRefreshTimer=setInterval(()=>{if(document.visibilityState!=='visible'||activeScreen!=='pattern')return;if(Date.now()-patternLastRefreshAt>=15*60*1000)renderPatternSearch()},30000)}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&activeScreen==='pattern'&&patternLastRefreshAt&&Date.now()-patternLastRefreshAt>=15*60*1000)renderPatternSearch()});
+startPatternAutoRefresh();
 function renderPatternSearch(){const token=++patternScanToken,q=($('patternSearch')?.value||'').trim().toLowerCase(),list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q)),selected=list.slice(0,500);$('patternSearchRows').innerHTML=selected.map(patternCardMarkup).join('')||'<div class="empty">Coin bulunamadı.</div>';const buttons=[...$('patternSearchRows').querySelectorAll('[data-pattern-id]')];buttons.forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));const status=$('patternScanStatus');if(status)status.textContent=patternTfConfig[patternTimeframe].label+' verileri taranıyor; kartlar hedef yüzdesine göre sıralanacak…';runPatternScan(buttons,token)}
 function openPatternCoin(id){
  const coin=coins.find(c=>c.id===id);if(!coin)return;
