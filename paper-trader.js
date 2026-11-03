@@ -219,7 +219,7 @@ async function autoCheck(){
 }
 async function syncCloud(){
  try{
-  const r=await fetch('./paper-portfolio.json?ts='+Date.now(),{cache:'no-store'});
+  const r=await fetch('https://raw.githubusercontent.com/volkancildir/VCrypto/main/paper-portfolio.json?ts='+Date.now(),{cache:'no-store'});
   if(!r.ok)throw Error('Sunucu portföyü okunamadı (HTTP '+r.status+')');
   const cloud=await r.json();
   state={...fresh(),...cloud,positions:Array.isArray(cloud.positions)?cloud.positions:[],trades:Array.isArray(cloud.trades)?cloud.trades:[],lastBars:cloud.lastBars||{},scanBars:cloud.scanBars||{}};
