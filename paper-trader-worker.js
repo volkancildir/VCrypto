@@ -20,6 +20,8 @@ function shouldExit(strategy,a){if(strategy==='alSat')return a.alSignal==='SAT';
 function levels(strategy,a,entry){let stop=strategy!=='alSat'&&a.pattern?Number(a.pattern.stop):a.atrStop,target=strategy!=='alSat'&&a.pattern&&a.pattern.targets?Number(a.pattern.targets[0]):a.atrTarget;if(!(stop>0&&stop<entry))stop=entry-1.5*a.atr;if(!(target>entry))target=entry+2*a.atr;return {stop,target}}
 async function main(){
  const s=readState();
+ const reset=process.env.RESET_STRATEGY;
+ if(STRATEGIES.includes(reset)){s.strategies[reset]=blankBook();console.log('Reset strategy:',reset)}
  const E=await engine();
  const rate=await fxRate();
  s.fxRate=rate;
