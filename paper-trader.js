@@ -72,16 +72,17 @@ async function getFx(){
  return fx;
 }
 function equity(){
- const exposure=state.positions.reduce((s,p)=>s+(Number(p.qty)||0)*(Number(p.lastPrice)||Number(p.entry)||0)/Math.max(fx,1e-12),0);
+ const exposure=state.positions.reduce((s,p)=>s+(Number(p.qty)||0)*(Number(p.lastPrice)||Number(p.entry)||0)/Math.max(fx,1e-12)*(1-FEE),0);
  return {exposure,equity:state.cash+exposure};
 }
 function render(){
  if(!$('paperPortfolio'))return;
  const {exposure,equity:total}=equity(),pnl=total-state.initial,realized=state.trades.reduce((s,t)=>s+(Number(t.pnl)||0),0);
- const unrealized=state.positions.reduce((s,p)=>s+((Number(p.qty)||0)*(Number(p.lastPrice)||Number(p.entry)||0)/Math.max(fx,1e-12)-(Number(p.costTL)||0)),0);
+ const unrealized=state.positions.reduce((s,p)=>s+((Number(p.qty)||0)*(Number(p.lastPrice)||Number(p.entry)||0)/Math.max(fx,1e-12)*(1-FEE)-(Number(p.costTL)||0)),0);
+ const periodPnl=tf=>state.trades.filter(t=>t.timeframe===tf).reduce((s,t)=>s+(Number(t.pnl)||0),0)+state.positions.filter(p=>p.timeframe===tf).reduce((s,p)=>s+(p.qty*p.lastPrice/Math.max(fx,1e-12)*(1-FEE)-p.costTL),0);
  $('paperEquity').textContent=fmt(total);$('paperPnl').textContent=fmt(pnl);$('paperCash').textContent=fmt(state.cash);$('paperExposure').textContent=fmt(exposure);
  $('paperPnl').classList.toggle('paper-positive',pnl>=0);$('paperPnl').classList.toggle('paper-negative',pnl<0);
- $('paperReturn').textContent='Getiri: '+pct(state.initial>0?pnl/state.initial*100:0)+' · Gerçekleşen: '+fmt(realized)+' · Açık kâr/zarar: '+fmt(unrealized);
+ $('paperReturn').textContent='Getiri: '+pct(state.initial>0?pnl/state.initial*100:0)+' · Gerçekleşen: '+fmt(realized)+' · Açık kâr/zarar: '+fmt(unrealized)+' · 4 saatlik: '+fmt(periodPnl('4h'))+' · Günlük: '+fmt(periodPnl('1d'));
  $('paperPositionCount').textContent='('+state.positions.length+')';
  $('paperPositions').innerHTML=state.positions.length?state.positions.map(p=>{
   const value=p.qty*p.lastPrice/Math.max(fx,1e-12),u=value-p.costTL,ret=p.costTL>0?u/p.costTL*100:0;
