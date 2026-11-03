@@ -533,6 +533,21 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
  #screen-news .news-meta,#screen-news .news-foot{font-size:21px}
 }
 </style>
+<style>
+#screen-pattern .pattern-timeframes{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:2px 0 10px;margin:0 0 4px}
+#screen-pattern .pattern-timeframes::-webkit-scrollbar{display:none}
+#screen-pattern .pattern-tf{flex:1 0 auto;min-width:65px;border:1px solid #21364d;background:#0c1728;color:#a5b6c9;border-radius:10px;padding:12px 9px;font-size:14px;font-weight:850;white-space:nowrap}
+#screen-pattern .pattern-tf.active{background:#123b3a;border-color:#21d6b0;color:#7af0d8}
+#screen-pattern .pattern-sort-note{font-size:12px;color:#91a4bd;margin:0 2px 10px}
+#screen-pattern .pattern-expected-move{font-size:13px;font-weight:900;color:#91a4bd;white-space:nowrap}
+#screen-pattern .pattern-expected-move.up{color:#0ecb81}
+#screen-pattern .pattern-expected-move.down{color:#f6465d}
+#screen-pattern .pattern-result{width:100%;font-size:12px}
+#screen-pattern .pattern-levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:7px 0}
+#screen-pattern .pattern-levels>div{min-width:0;background:#0c1728;border:1px solid #21364d;border-radius:8px;padding:6px}
+#screen-pattern .pattern-levels small{display:block;color:#91a4bd;font-size:10px}
+#screen-pattern .pattern-levels b{display:block;font-size:12px;overflow-wrap:anywhere;margin-top:2px}
+</style>
 </head>
 <body>
 <div class="app">
@@ -559,7 +574,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 <div class="error" id="signalError" role="alert"></div>
 </section>
 
-<section class="screen" id="screen-pattern"><div class="screen-heading"><div><p class="eyebrow">TEKNİK SENARYO</p><h1 class="h1">Formasyon analizi</h1><p class="sub">Coin ara; formasyonu ve olası hedefleri grafik üzerinde gör.</p></div></div><label class="search" for="patternSearch"><span>⌕</span><input id="patternSearch" type="search" placeholder="Coin adı veya sembol ara (BTC, SOL…)" aria-label="Formasyon analizi için coin ara"></label><div class="panel" id="patternSearchPanel"><div class="section-title">Coin seç</div><div class="coin-list" id="patternSearchRows"><div class="empty">Canlı coin listesi yükleniyor…</div></div></div><div id="patternSelected" style="display:none"><button id="patternChangeCoin" type="button" style="width:100%;margin:0 0 12px;border:1px solid #1c695f;border-radius:12px;background:#123b3a;color:#21d6b0;padding:13px;font-size:16px;font-weight:850;text-align:left">‹ Başka coin ara</button><iframe id="patternFrame" title="Coin formasyon ve hedef analizi" style="display:block;width:calc(100% + 28px);height:1100px;border:0;margin:0 -14px;background:#08111f"></iframe></div></section>
+<section class="screen" id="screen-pattern"><div class="screen-heading"><div><p class="eyebrow">TEKNİK SENARYO</p><h1 class="h1">Formasyon analizi</h1><p class="sub">Coin ara; formasyonu ve olası hedefleri grafik üzerinde gör.</p></div></div><label class="search" for="patternSearch"><span>⌕</span><input id="patternSearch" type="search" placeholder="Coin adı veya sembol ara (BTC, SOL…)" aria-label="Formasyon analizi için coin ara"></label><div class="pattern-timeframes" id="patternTimeframes" aria-label="Formasyon zaman aralığı"><button type="button" class="pattern-tf" data-pattern-tf="1h">1 saat</button><button type="button" class="pattern-tf active" data-pattern-tf="4h">4 saat</button><button type="button" class="pattern-tf" data-pattern-tf="1d">1 gün</button><button type="button" class="pattern-tf" data-pattern-tf="1w">1 hafta</button><button type="button" class="pattern-tf" data-pattern-tf="1M">1 ay</button><button type="button" class="pattern-tf" data-pattern-tf="1y">1 yıl</button></div><div class="pattern-sort-note" id="patternScanStatus">Hedef 2 yüzdesine göre yüksekten düşüğe sıralanır.</div><div class="panel" id="patternSearchPanel"><div class="section-title">Coin seç</div><div class="coin-list" id="patternSearchRows"><div class="empty">Canlı coin listesi yükleniyor…</div></div></div><div id="patternSelected" style="display:none"><button id="patternChangeCoin" type="button" style="width:100%;margin:0 0 12px;border:1px solid #1c695f;border-radius:12px;background:#123b3a;color:#21d6b0;padding:13px;font-size:16px;font-weight:850;text-align:left">‹ Başka coin ara</button><iframe id="patternFrame" title="Coin formasyon ve hedef analizi" style="display:block;width:calc(100% + 28px);height:1100px;border:0;margin:0 -14px;background:#08111f"></iframe></div></section>
 <section class="screen" id="screen-analysis"><iframe id="analysisFrame" title="Coin teknik analiz" src="./analysis.html?embed=1&v=41&symbol=BTC&name=Bitcoin" style="display:block;visibility:visible;width:calc(100% + 32px);height:1100px;min-height:75vh;border:0;margin:0 -16px;background:#08111f"></iframe></section>
 
 <section class="screen" id="screen-news">
@@ -668,54 +683,39 @@ coins=coins.filter(c=>{const sym=String(c.symbol||'').toUpperCase(),id=String(c.
 coins.sort((a,b)=>(a.market_cap_rank||999999)-(b.market_cap_rank||999999));coins=coins.slice(0,500);if(globalResult.status==='fulfilled'){globalData=globalResult.value.data||{};$('totalCap').textContent=compact(globalData.total_market_cap?.usd);$('totalVolume').textContent=compact(globalData.total_volume?.usd);$('btcDominance').textContent=Number.isFinite(Number(globalData.market_cap_percentage?.btc))?Number(globalData.market_cap_percentage.btc).toFixed(1)+'%':'—';$('coinCount').textContent=new Intl.NumberFormat('tr-TR').format(globalData.active_cryptocurrencies||0);const change=Number(globalData.market_cap_change_percentage_24h_usd);$('globalChange').textContent='24s '+pct(change);$('globalChange').classList.toggle('down',change<0)}else{$('totalCap').textContent='—';$('totalVolume').textContent='—';$('btcDominance').textContent='—';$('coinCount').textContent='—';$('globalChange').textContent='24s —';$('globalChange').classList.remove('down')}if(!coins.length)throw Error('Piyasa sağlayıcısı boş veri döndürdü.');$('statusText').textContent=globalResult.status==='fulfilled'?'Canlı':'Fiyatlar canlı';$('liveDot').style.background='var(--green)';if(globalResult.status!=='fulfilled'){$('errorBox').textContent='Coin fiyatları geldi; genel piyasa özeti şu anda alınamadı.';$('errorBox').style.display='block'}renderAll();if(activeScreen==='wallet'&&typeof renderWallet==='function')renderWallet()}catch(e){$('statusText').textContent='Bağlantı yok';$('liveDot').style.background='var(--red)';$('errorBox').textContent='Piyasa verileri alınamadı: '+(e&&e.message?e.message:'Bağlantı hatası')+' İnternet bağlantını kontrol edip yeniden dene.';$('errorBox').style.display='block';if(!coins.length){renderList('coinRows',[],'Veriler şu anda yüklenemiyor. Yenile düğmesini kullan.');renderOtherLists()}}finally{busy=false;btn.disabled=false}}
 function setScreen(name){activeScreen=name;try{localStorage.setItem('vcryptoActiveScreen',name)}catch(e){}document.querySelectorAll('.screen').forEach(el=>el.classList.toggle('active',el.id==='screen-'+name));document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.screen===name));if(name==='market')renderMarket();if(name==='news')loadNews(false);if(name==='favorites')renderOtherLists();if(name==='wallet'&&typeof renderWallet==='function')renderWallet();if(name==='pattern')renderPatternSearch();if(name==='signal'&&!signalCache.length)runSignalScan();if(name==='analysis'){const frame=$('analysisFrame');frame.style.display='block';frame.style.visibility='visible';if(frame.dataset.loaded!=='1'){frame.src='./analysis.html?embed=1&v=47&symbol=BTC&name=Bitcoin';frame.dataset.loaded='1'}else{frame.contentWindow.postMessage({type:'vcrypto-resize-request'},location.origin);if(!frame.contentWindow.location.href.includes('analysis.html'))frame.src='./analysis.html?embed=1&v=47&symbol=BTC&name=Bitcoin'}}window.scrollTo({top:0,behavior:'smooth'})}
 let patternSearchTimer=null;
+let patternTimeframe='4h',patternScanToken=0;
 const patternCardCache=new Map();
 let patternCardObserver=null;
-function patternCardMarkup(c){
- return '<button type="button" class="pattern-coin-card" data-pattern-id="'+safe(c.id)+'"><div class="pattern-card-top"><img class="coin-icon" loading="lazy" src="'+safe(c.image||'./icon.svg')+'" alt="" onerror="this.src=\'./icon.svg\'"><span class="pattern-card-symbol">'+safe(String(c.symbol||'').toUpperCase())+'</span><span class="pattern-expected-move" data-expected-move>—</span></div><strong>'+safe(c.name)+'</strong><div class="pattern-result" data-pattern-result><span class="pattern-result-state">Formasyon analizi bekleniyor…</span></div><span class="pattern-card-action">Formasyon grafiğini aç <b>›</b></span></button>';
-}
+const patternTfConfig={'1h':{interval:'1h',limit:120,label:'1 saatlik'},'4h':{interval:'4h',limit:120,label:'4 saatlik'},'1d':{interval:'1d',limit:120,label:'1 günlük'},'1w':{interval:'1w',limit:120,label:'1 haftalık'},'1M':{interval:'1M',limit:100,label:'1 aylık'},'1y':{interval:'1d',limit:365,label:'1 yıllık · günlük mumlar'}};
+function patternCardMarkup(c){return '<button type="button" class="pattern-coin-card" data-pattern-id="'+safe(c.id)+'" data-target-pct="-1"><div class="pattern-card-top"><img class="coin-icon" loading="lazy" src="'+safe(c.image||'./icon.svg')+'" alt="" onerror="this.src=\'./icon.svg\'"><span class="pattern-card-symbol">'+safe(String(c.symbol||'').toUpperCase())+'</span><span class="pattern-expected-move" data-expected-move>Hesaplanıyor…</span></div><strong>'+safe(c.name)+'</strong><div class="pattern-result" data-pattern-result><span class="pattern-result-state">Seçili zaman dilimi taranıyor…</span></div><span class="pattern-card-action">Formasyon grafiğini aç <b>›</b></span></button>'}
 function fmtPatternLevel(v){return Number(v).toLocaleString('en-US',{maximumFractionDigits:v<1?7:3})}
-async function loadPatternCard(btn){
- const id=btn.dataset.patternId,coin=coins.find(c=>c.id===id),box=btn.querySelector('[data-pattern-result]');if(!coin||!box||btn.dataset.loaded==='1')return;
- btn.dataset.loaded='1';
- const symbol=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+function sortPatternCards(){const root=$('patternSearchRows');if(!root)return;[...root.querySelectorAll('[data-pattern-id]')].sort((a,b)=>Number(b.dataset.targetPct)-Number(a.dataset.targetPct)).forEach(el=>root.appendChild(el))}
+async function loadPatternCard(btn,token=patternScanToken){
+ const id=btn.dataset.patternId,coin=coins.find(c=>c.id===id),box=btn.querySelector('[data-pattern-result]');if(!coin||!box)return;
+ const symbol=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,''),cfg=patternTfConfig[patternTimeframe]||patternTfConfig['4h'],cacheKey=patternTimeframe+':'+symbol;
  try{
-  let item=patternCardCache.get(symbol);
-  if(!item){
-   const raw=await getBinanceKlines(symbol+'USDT','4h',120);
-   const candles=raw.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));
-   item={raw,candles,patterns:window.VCryptoPatternEngine.scan(candles)};
-   patternCardCache.set(symbol,item);
-  }
-  const {candles,patterns}=item,last=candles[candles.length-1];
-  if(!patterns.length){box.innerHTML='<span class="pattern-result-state">Belirgin formasyon tespit edilmedi</span><span class="pattern-result-direction neutral">Nötr · Sinyal yok</span>';return}
-  const sorted=patterns.slice().sort((x,y)=>(Number(y.confirmed)-Number(x.confirmed))||y.score-x.score),p=sorted[0];
-  const dir=p.direction>0?1:p.direction<0?-1:0,cls=dir>0?'up':dir<0?'down':'neutral';
+  let item=patternCardCache.get(cacheKey);
+  if(!item){const raw=await getBinanceKlines(symbol+'USDT',cfg.interval,cfg.limit);const candles=raw.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));item={raw,candles,patterns:window.VCryptoPatternEngine.scan(candles)};patternCardCache.set(cacheKey,item)}
+  if(token!==patternScanToken)return;
+  const {candles,patterns}=item,last=candles[candles.length-1];if(!last||candles.length<30)throw Error('Yeterli mum verisi yok');
+  if(!patterns.length){btn.dataset.targetPct='-1';box.innerHTML='<span class="pattern-result-state">Belirgin formasyon tespit edilmedi</span><span class="pattern-result-direction neutral">Nötr · Sinyal yok</span>';btn.querySelector('[data-expected-move]').textContent='—';sortPatternCards();return}
+  const p=patterns.slice().sort((x,y)=>(Number(y.confirmed)-Number(x.confirmed))||y.score-x.score)[0],dir=p.direction>0?1:p.direction<0?-1:0,cls=dir>0?'up':dir<0?'down':'neutral';
   const ranges=[];for(let i=Math.max(1,candles.length-14);i<candles.length;i++)ranges.push(Math.max(candles[i].h-candles[i].l,Math.abs(candles[i].h-candles[i-1].c),Math.abs(candles[i].l-candles[i-1].c)));
-  const atr=ranges.reduce((x,y)=>x+y,0)/Math.max(1,ranges.length),entry=last.c;
-  const target2=entry+dir*2*atr,movePct=dir?(target2-entry)/entry*100:0;
-  const move=btn.querySelector('[data-expected-move]');if(move){move.textContent=dir?(movePct>0?'+':'')+movePct.toFixed(2)+'%':'—';move.classList.toggle('up',dir>0);move.classList.toggle('down',dir<0);move.title='Hedef 2 baz alınarak hesaplanan teorik fiyat hareketi';}
-   const levels=dir?'<div class="pattern-levels"><div><small>Giriş referansı</small><b>$'+fmtPatternLevel(entry)+'</b></div><div><small>Hedef 1 · 1 ATR</small><b>$'+fmtPatternLevel(entry+dir*atr)+'</b></div><div><small>Hedef 2 · 2 ATR</small><b>$'+fmtPatternLevel(target2)+'</b></div><div><small>Stop · 1 ATR</small><b>$'+fmtPatternLevel(entry-dir*atr)+'</b></div></div>':'<div class="pattern-result-meta">Yön net değil; hedef ve stop seviyesi üretilmedi.</div>';
-   box.innerHTML='<span class="pattern-result-name">'+safe(p.name)+'</span><span class="pattern-result-direction '+cls+'">'+(dir>0?'Yukarı yönlü':dir<0?'Aşağı yönlü':'Yönsüz')+'</span><span class="pattern-result-meta">'+(p.confirmed?'Teyitli yapı':'Teyit bekliyor')+' · Tespit puanı '+p.score+'/5 · 4 saatlik</span>'+levels+'<span class="pattern-result-meta">'+safe(p.detail)+'</span>';
- }catch(err){box.innerHTML='<span class="pattern-result-state">Formasyon verisi alınamadı</span>'}
+  const atr=ranges.reduce((x,y)=>x+y,0)/Math.max(1,ranges.length),entry=last.c,target1=entry+dir*atr,target2=entry+dir*2*atr,movePct=dir?Math.abs((target2-entry)/entry*100):0;
+  const move=btn.querySelector('[data-expected-move]');if(move){move.textContent=dir?(dir>0?'+':'−')+movePct.toFixed(2)+'%':'—';move.classList.toggle('up',dir>0);move.classList.toggle('down',dir<0);move.title='Hedef 2’ye kadar teorik fiyat hareketi'}
+  btn.dataset.targetPct=dir?String(movePct):'-1';
+  const levels=dir?'<div class="pattern-levels"><div><small>Giriş referansı</small><b>$'+fmtPatternLevel(entry)+'</b></div><div><small>Hedef 1 · 1 ATR</small><b>$'+fmtPatternLevel(target1)+'</b></div><div><small>Hedef 2 · 2 ATR</small><b>$'+fmtPatternLevel(target2)+'</b></div><div><small>Stop · 1 ATR</small><b>$'+fmtPatternLevel(entry-dir*atr)+'</b></div></div>':'<div class="pattern-result-meta">Yön net değil; hedef ve stop seviyesi üretilmedi.</div>';
+  box.innerHTML='<span class="pattern-result-name">'+safe(p.name)+'</span><span class="pattern-result-direction '+cls+'">'+(dir>0?'Yukarı yönlü':dir<0?'Aşağı yönlü':'Yönsüz')+'</span><span class="pattern-result-meta">'+(p.confirmed?'Teyitli yapı':'Teyit bekliyor')+' · Tespit puanı '+p.score+'/5 · '+cfg.label+'</span>'+levels+'<span class="pattern-result-meta">'+safe(p.detail)+'</span>';sortPatternCards();
+ }catch(err){if(token!==patternScanToken)return;btn.dataset.targetPct='-1';box.innerHTML='<span class="pattern-result-state">Bu zaman diliminde veri alınamadı</span>';btn.querySelector('[data-expected-move]').textContent='—';sortPatternCards()}
 }
-function renderPatternSearch(){
- const q=($('patternSearch')?.value||'').trim().toLowerCase();
- const list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q));
- $('patternSearchRows').innerHTML=list.slice(0,q?500:100).map(patternCardMarkup).join('')||'<div class="empty">Coin bulunamadı.</div>';
- if(patternCardObserver)patternCardObserver.disconnect();
- const buttons=[...$('patternSearchRows').querySelectorAll('[data-pattern-id]')];
- if('IntersectionObserver' in window){
-  patternCardObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){patternCardObserver.unobserve(entry.target);loadPatternCard(entry.target)}}),{rootMargin:'500px 0px'});
-  buttons.forEach(btn=>patternCardObserver.observe(btn));
- }else buttons.slice(0,8).forEach(loadPatternCard);
- buttons.forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));
-}
+async function runPatternScan(buttons,token){const status=$('patternScanStatus');let next=0,done=0;const workers=Array.from({length:5},async()=>{while(next<buttons.length&&token===patternScanToken){const btn=buttons[next++];await loadPatternCard(btn,token);done++;if(status&&token===patternScanToken)status.textContent=patternTfConfig[patternTimeframe].label+' taraması: '+done+'/'+buttons.length+' coin · hedef yüzdesine göre sıralanıyor.'}});await Promise.all(workers);if(status&&token===patternScanToken)status.textContent=buttons.length+' coin tarandı · Hedef 2 yüzdesi yüksekten düşüğe sıralandı.';sortPatternCards()}
+function renderPatternSearch(){const token=++patternScanToken,q=($('patternSearch')?.value||'').trim().toLowerCase(),list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q)),selected=list.slice(0,q?500:100);$('patternSearchRows').innerHTML=selected.map(patternCardMarkup).join('')||'<div class="empty">Coin bulunamadı.</div>';const buttons=[...$('patternSearchRows').querySelectorAll('[data-pattern-id]')];buttons.forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));const status=$('patternScanStatus');if(status)status.textContent=patternTfConfig[patternTimeframe].label+' verileri taranıyor; kartlar hedef yüzdesine göre sıralanacak…';runPatternScan(buttons,token)}
 function openPatternCoin(id){
  const coin=coins.find(c=>c.id===id);if(!coin)return;
  const sym=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
  if(!sym){toast('Bu coin için sembol bulunamadı.');return}
  $('patternSearchPanel').style.display='none';$('patternSelected').style.display='block';
- const frame=$('patternFrame'),q=new URLSearchParams({embed:'1',symbol:sym,name:coin.name||sym,view:'4h'});
+ const frame=$('patternFrame'),q=new URLSearchParams({embed:'1',symbol:sym,name:coin.name||sym,view:patternTimeframe==='1y'?'1d':patternTimeframe});
  frame.onload=()=>{const item=patternCardCache.get(sym);if(item)frame.contentWindow.postMessage({type:'vcrypto-preloaded-candles',symbol:sym,raw:item.raw},location.origin)};
  frame.src='./pattern.html?'+q.toString();
  window.scrollTo({top:0,behavior:'instant'});
@@ -956,7 +956,7 @@ $('newsImportanceFilters').addEventListener('click',e=>{const button=e.target.cl
  $('newsSearch').addEventListener('input',renderNews);$('newsRefresh').addEventListener('click',()=>loadNews(true));$('newsBack').addEventListener('click',closeNewsDetail);
 
 document.querySelectorAll('.nav-item').forEach(btn=>btn.addEventListener('click',()=>{if(btn.dataset.screen==='news'&&$('newsDetailView').classList.contains('open'))closeNewsDetail();setScreen(btn.dataset.screen)}));document.querySelectorAll('.filter').forEach(btn=>btn.addEventListener('click',()=>setFilter(btn.dataset.filter)));
-$('patternSearch').addEventListener('input',renderPatternSearch);$('patternChangeCoin').addEventListener('click',backToPatternSearch);$('signalRefresh').addEventListener('click',()=>runSignalScan(true));$('signalTimeframe').addEventListener('change',()=>{signalCache=[];runSignalScan(true)});$('searchInput').addEventListener('input',renderMarket);$('favoriteSearch').addEventListener('input',renderOtherLists);$('clearSearch').addEventListener('click',()=>{$('searchInput').value='';renderMarket();$('searchInput').focus()});
+$('patternSearch').addEventListener('input',renderPatternSearch);document.querySelectorAll('[data-pattern-tf]').forEach(btn=>btn.addEventListener('click',()=>{patternTimeframe=btn.dataset.patternTf;document.querySelectorAll('[data-pattern-tf]').forEach(x=>x.classList.toggle('active',x===btn));renderPatternSearch()}));$('patternChangeCoin').addEventListener('click',backToPatternSearch);$('signalRefresh').addEventListener('click',()=>runSignalScan(true));$('signalTimeframe').addEventListener('change',()=>{signalCache=[];runSignalScan(true)});$('searchInput').addEventListener('input',renderMarket);$('favoriteSearch').addEventListener('input',renderOtherLists);$('clearSearch').addEventListener('click',()=>{$('searchInput').value='';renderMarket();$('searchInput').focus()});
 $('refreshBtn').addEventListener('click',refreshData);$('installBtn').addEventListener('click',requestInstall);
 setScreen(activeScreen);
 (function enablePullToRefresh(){let startY=0,armed=false;const ignored=el=>!!el.closest('input,textarea,select,a,canvas,iframe,[contenteditable="true"]');document.addEventListener('touchstart',e=>{armed=false;if(e.touches.length!==1||window.scrollY>2||ignored(e.target))return;startY=e.touches[0].clientY;armed=startY<150},{passive:true});document.addEventListener('touchend',e=>{if(!armed)return;armed=false;if(!e.changedTouches||!e.changedTouches.length||window.scrollY>2)return;const delta=e.changedTouches[0].clientY-startY;if(delta>100){if(window.__vcryptoPullRefreshBusy)return;window.__vcryptoPullRefreshBusy=true;const task=refreshData();Promise.resolve(task).finally(()=>{window.__vcryptoPullRefreshBusy=false})}},{passive:true});})();
