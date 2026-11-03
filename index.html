@@ -720,7 +720,7 @@ async function writePatternCache(key,raw){
    const tx=db.transaction('klines','readwrite'),store=tx.objectStore('klines'),now=Date.now();
    const cursor=store.openCursor();
    cursor.onsuccess=()=>{const c=cursor.result;if(c){if(!c.value||c.value.expiresAt<=now)c.delete();c.continue()}};
-   store.put({key,raw,expiresAt:now+5*60*1000,savedAt:now});
+   store.put({key,raw,expiresAt:now+15*60*1000,savedAt:now});
    tx.oncomplete=()=>resolve();tx.onerror=()=>resolve();tx.onabort=()=>resolve();
   }catch(e){resolve()}
  });
