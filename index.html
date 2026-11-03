@@ -695,7 +695,7 @@ async function loadPatternCard(btn){
   const target2=entry+dir*2*atr,movePct=dir?(target2-entry)/entry*100:0;
   const move=btn.querySelector('[data-expected-move]');if(move){move.textContent=dir?(movePct>0?'+':'')+movePct.toFixed(2)+'%':'—';move.classList.toggle('up',dir>0);move.classList.toggle('down',dir<0);move.title='Hedef 2 baz alınarak hesaplanan teorik fiyat hareketi';}
    const levels=dir?'<div class="pattern-levels"><div><small>Giriş referansı</small><b>$'+fmtPatternLevel(entry)+'</b></div><div><small>Hedef 1 · 1 ATR</small><b>$'+fmtPatternLevel(entry+dir*atr)+'</b></div><div><small>Hedef 2 · 2 ATR</small><b>$'+fmtPatternLevel(target2)+'</b></div><div><small>Stop · 1 ATR</small><b>$'+fmtPatternLevel(entry-dir*atr)+'</b></div></div>':'<div class="pattern-result-meta">Yön net değil; hedef ve stop seviyesi üretilmedi.</div>';
-   box.innerHTML='<span class="pattern-result-name">'+safe(p.name)+'</span><span class="pattern-result-direction '+cls+'">'+(dir>0?'Yukarı yönlü':dir<0?'Aşağı yönlü':'Yönsüz')+'</span><span class="pattern-result-meta">'+(p.confirmed?'Teyitli yapı':'Teyit bekliyor')+' · Tespit puanı '+p.score+'/5 · 4 saatlik</span>'+levels+'<span class="pattern-result-meta">'+safe(p.detail)+'</span>
+   box.innerHTML='<span class="pattern-result-name">'+safe(p.name)+'</span><span class="pattern-result-direction '+cls+'">'+(dir>0?'Yukarı yönlü':dir<0?'Aşağı yönlü':'Yönsüz')+'</span><span class="pattern-result-meta">'+(p.confirmed?'Teyitli yapı':'Teyit bekliyor')+' · Tespit puanı '+p.score+'/5 · 4 saatlik</span>'+levels+'<span class="pattern-result-meta">'+safe(p.detail)+'</span>';
  }catch(err){box.innerHTML='<span class="pattern-result-state">Formasyon verisi alınamadı</span>'}
 }
 function renderPatternSearch(){
