@@ -297,7 +297,7 @@ function setupCandleReadout(){
  canvas.addEventListener('click',e=>show(e.clientX));
 }
 
-function openDetail(){ $('cardsView').style.display='none';$('detailView').style.display='block';window.scrollTo(0,0); }
+function openDetail(){ $('cardsView').style.display='none';$('detailView').style.display='block';if(candles.length){draw(candles,analyze(candles));reportPatternHeight()}window.scrollTo(0,0); }
 function openCards(){ $('detailView').style.display='none';$('cardsView').style.display='block';window.scrollTo(0,0); }
 function renderCardLibrary(patterns){
  const root=$('cardPatternLibrary');if(!root)return;
