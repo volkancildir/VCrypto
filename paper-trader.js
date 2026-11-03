@@ -175,6 +175,7 @@ async function scanInterval(interval,universe,rate){
 }
 async function scanAll(force){
  if(busy)return;
+ if(typeof signalBusy!=='undefined'&&signalBusy){status('Al/Sat taraması sürüyor; sanal tarama biraz sonra başlayacak.');setTimeout(()=>scanAll(force),10000);return;}
  if(!force&&!state.active)return;
  busy=true;render();status('Kur ve piyasa verileri hazırlanıyor…');
  try{
@@ -210,7 +211,7 @@ async function latestClosedTime(interval){
  return 0;
 }
 async function autoCheck(){
- if(!state.active||busy)return;
+ if(!state.active||busy||(typeof signalBusy!=='undefined'&&signalBusy))return;
  try{
   const [t4,td]=await Promise.all([latestClosedTime('4h'),latestClosedTime('1d')]);
   const due=(t4>0&&t4>Number(state.scanBars['4h']||0))||(td>0&&td>Number(state.scanBars['1d']||0));
