@@ -33,6 +33,11 @@ async function main(){
    const live=livePrices.get(pos.symbol);
    if(!(live>0))continue;
    pos.lastPrice=live;
+   // Close legacy daily positions at the live quote when migrating the test to 1h.
+   if(pos.timeframe==='1d'){
+    closePos(book,pos,live,'Zaman dilimi değişimi: 1 günlük testten 1 saatliğe geçiş',rate);
+    continue;
+   }
    if(live<=pos.stop)closePos(book,pos,pos.stop,'Zarar-kes (canlı fiyat kontrolü)',rate);
    else if(live>=pos.target)closePos(book,pos,pos.target,'Hedef (canlı fiyat kontrolü)',rate);
   }
