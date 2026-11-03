@@ -1,6 +1,11 @@
 name: VCrypto Paper Portfolio
 
 on:
+  push:
+    branches: ["main"]
+    paths:
+      - "paper-trader-worker.js"
+      - ".github/workflows/paper-trader.yml"
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
