@@ -671,7 +671,9 @@ let patternSearchTimer=null;
 function renderPatternSearch(){
  const q=($('patternSearch')?.value||'').trim().toLowerCase();
  const list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q));
- $('patternSearchRows').innerHTML=list.slice(0,q?500:100).map(c=>'<button type="button" class="pattern-coin-card" data-pattern-id="'+safe(c.id)+'"><div class="pattern-card-top"><img class="coin-icon" src="'+safe(c.image||'./icon.svg')+'" alt="" onerror="this.src=\'./icon.svg\'"><span class="pattern-card-arrow">↗</span></div><strong>'+safe(c.name)+'</strong><span class="pattern-card-symbol">'+safe(String(c.symbol||'').toUpperCase())+'</span><span class="pattern-card-action">Formasyon grafiğini aç <b>›</b></span></button>').join('')||'<div class="empty">Coin bulunamadı.</div>';
+ const money=v=>Number.isFinite(Number(v))?Number(v).toLocaleString('en-US',{maximumFractionDigits:Number(v)<1?6:2}):'—';
+ const change=v=>Number.isFinite(Number(v))?(Number(v)>0?'+':'')+Number(v).toFixed(2)+'%':'—';
+ $('patternSearchRows').innerHTML=list.slice(0,q?500:100).map(c=>'<button type="button" class="pattern-coin-card" data-pattern-id="'+safe(c.id)+'"><div class="pattern-card-top"><img class="coin-icon" loading="lazy" src="'+safe(c.image||'./icon.svg')+'" alt="" onerror="this.src=\'./icon.svg\'"><span class="pattern-card-rank">#'+(c.market_cap_rank||'—')+'</span></div><strong>'+safe(c.name)+'</strong><span class="pattern-card-symbol">'+safe(String(c.symbol||'').toUpperCase())+'</span><div class="pattern-card-info"><span>Fiyat</span><b>$'+money(c.current_price)+'</b></div><div class="pattern-card-info"><span>24 saat</span><b class="'+(Number(c.price_change_percentage_24h)>=0?'positive':'negative')+'">'+change(c.price_change_percentage_24h)+'</b></div><span class="pattern-card-action">Formasyon grafiğini aç <b>›</b></span></button>').join('')||'<div class="empty">Coin bulunamadı.</div>';
  $('patternSearchRows').querySelectorAll('[data-pattern-id]').forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));
 }
 function openPatternCoin(id){
@@ -1157,4 +1159,22 @@ body{zoom:1.12}
 #screen-pattern > .search{min-height:80px!important;height:80px!important;padding:0 20px!important;gap:16px!important;border-radius:18px!important}
 #screen-pattern > .search > span{font-size:38px!important;line-height:1!important}
 #screen-pattern > .search > input{font-size:25px!important;min-height:74px!important}
+
+/* Portrait coin cards with useful market information */
+#screen-pattern #patternSearchRows{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#screen-pattern .pattern-coin-card{min-width:0;min-height:270px;padding:16px 14px;display:flex;flex-direction:column;align-items:stretch;gap:7px;text-align:left;border:1px solid #29445e;border-radius:17px;background:linear-gradient(155deg,#162943 0%,#0d1a2d 100%);color:#f1f7fb;box-shadow:0 8px 22px #0003}
+#screen-pattern .pattern-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+#screen-pattern .pattern-coin-card .coin-icon{width:50px!important;height:50px!important;flex:0 0 50px!important}
+#screen-pattern .pattern-card-rank{font-size:13px;color:#91a9c0;background:#0a1728;border:1px solid #29445e;border-radius:8px;padding:5px 8px}
+#screen-pattern .pattern-coin-card>strong{font-size:19px;line-height:1.25;min-height:48px;overflow-wrap:anywhere}
+#screen-pattern .pattern-card-symbol{font-size:14px;color:#91a9c0;margin-top:-4px}
+#screen-pattern .pattern-card-info{display:flex;justify-content:space-between;gap:5px;padding-top:7px;border-top:1px solid #29445e;font-size:13px}
+#screen-pattern .pattern-card-info span{color:#91a9c0}
+#screen-pattern .pattern-card-info b{font-size:13px;white-space:nowrap}
+#screen-pattern .pattern-card-info .positive{color:#21d6b0}
+#screen-pattern .pattern-card-info .negative{color:#ff6579}
+#screen-pattern .pattern-card-action{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:10px;border-top:1px solid #29445e;color:#7af0d8;font-size:12px;font-weight:850}
+#screen-pattern .pattern-card-action b{font-size:20px}
+@media(max-width:370px){#screen-pattern #patternSearchRows{gap:9px}#screen-pattern .pattern-coin-card{min-height:250px;padding:13px 11px}#screen-pattern .pattern-coin-card>strong{font-size:17px}}
+
 </style>
