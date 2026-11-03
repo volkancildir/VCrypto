@@ -91,7 +91,7 @@ async function main(){
         }
         continue;
        }
-       if(!isNew||book.positions.some(p=>p.symbol===symbol))continue;
+       if(!isNew||book.positions.some(p=>p.symbol===symbol&&p.timeframe===interval))continue;
        const analysis=analyze(candles,E);
        if(!analysis||!allowed(strategy,analysis)||rotationLocks[strategy])continue;
        rotationLocks[strategy]=true;
