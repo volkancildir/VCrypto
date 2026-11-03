@@ -38,18 +38,19 @@ async function main(){
   }
  }
 
+ // The former daily timeframe is replaced by 1-hour candles.
  const btc4=await binance('klines?symbol=BTCUSDT&interval=4h&limit=3');
- const btcd=await binance('klines?symbol=BTCUSDT&interval=1d&limit=3');
+ const btc1=await binance('klines?symbol=BTCUSDT&interval=1h&limit=3');
  const closed4=Number(btc4[btc4.length-2][0]);
- const closedD=Number(btcd[btcd.length-2][0]);
+ const closed1=Number(btc1[btc1.length-2][0]);
  const due4=closed4>Number(s.scanBars['4h']||0);
- const dueD=closedD>Number(s.scanBars['1d']||0);
+ const due1=closed1>Number(s.scanBars['1h']||0);
 
- if(due4||dueD){
+ if(due4||due1){
   const coins=await universe();
-  console.log('Universe',coins.length,'4h',due4,'1d',dueD);
-  for(const interval of ['4h','1d']){
-   if((interval==='4h'&&!due4)||(interval==='1d'&&!dueD))continue;
+  console.log('Universe',coins.length,'4h',due4,'1h',due1);
+  for(const interval of ['4h','1h']){
+   if((interval==='4h'&&!due4)||(interval==='1h'&&!due1))continue;
    let next=0,opened=0,closed=0,failed=0;
    async function worker(){
     while(next<coins.length){
@@ -117,7 +118,7 @@ async function main(){
     }
    }
    await Promise.all(Array.from({length:6},worker));
-   s.scanBars[interval]=interval==='4h'?closed4:closedD;
+   s.scanBars[interval]=interval==='4h'?closed4:closed1;
    console.log(interval,{opened,closed,failed});
   }
  }
