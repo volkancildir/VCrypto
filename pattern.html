@@ -55,11 +55,42 @@
 #backtestStatus{font-size:13px;color:var(--muted);margin-top:9px;line-height:1.6}
 @media(max-width:420px){.bt-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.bt-metric strong{font-size:14px}.bt-controls{align-items:stretch}}
 
+
+/* Card-first historical pattern flow; the existing chart remains the detail view. */
+#detailView{display:none}
+#cardsView{padding-bottom:24px}
+.signal-card{width:100%;text-align:left;background:linear-gradient(145deg,#102039,#0b1727);border:1px solid var(--line);border-radius:15px;padding:15px;margin:10px 0;color:var(--text);display:block}
+.signal-card:active{transform:scale(.99)}
+.signal-card-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.signal-card-title{font-size:18px;font-weight:900}
+.signal-card-status{font-size:12px;font-weight:900;border:1px solid var(--line);border-radius:99px;padding:5px 9px;color:var(--gold)}
+.signal-card-status.up{color:var(--green);border-color:#246d55}
+.signal-card-status.down{color:var(--red);border-color:#713341}
+.signal-card-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:12px}
+.signal-card-metrics div{background:#081522;border:1px solid var(--line);border-radius:9px;padding:9px;min-width:0}
+.signal-card-metrics small{display:block;color:var(--muted);font-size:11px}
+.signal-card-metrics strong{display:block;font-size:15px;margin-top:4px;overflow-wrap:anywhere}
+.signal-card-note{font-size:13px;color:#c6d5e3;margin-top:10px;line-height:1.55}
+.card-open{color:var(--teal2);font-size:13px;font-weight:850;margin-top:10px}
+.card-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:12px 0}
+.card-toolbar button{border:1px solid #1b756b;background:#103a3a;color:var(--teal2);border-radius:10px;padding:9px 12px;font-weight:850}
+@media(max-width:420px){.signal-card-metrics strong{font-size:13px}}
 </style>
 </head>
 <body>
 <div class="app">
 <header class="topbar"><div class="brand">V<span>Crypto</span></div><button class="back" id="backBtn">‹ Coin analizi</button></header>
+<section id="cardsView">
+<section class="heading"><p class="eyebrow">TARİHSEL FORMASYON ANALİZİ</p><div class="title">Benzer grafik senaryoları</div><div class="sub">Geçmişte bugünkü mum yapısına benzeyen dönemler taranır. Yeterli ve tutarlı örnek yoksa sinyal üretilmez.</div><div class="coin-line"><div><div class="coin-name" id="cardCoinName">Coin</div><div class="sub" id="cardPair">—/USDT · Binance Spot</div></div><div class="price" id="cardPrice">—</div></div></section>
+<div class="error" id="cardError"></div>
+<div class="card-toolbar"><span class="panel-sub" id="cardStatus">Geçmiş mumlar ve benzer örnekler taranıyor…</span><button type="button" id="refreshCards">Yenile</button></div>
+<div id="historicalCards"><div class="loading">Tarihsel benzerlikler hesaplanıyor…</div></div>
+<div class="panel"><div class="panel-title">Tespit edilen teknik yapılar</div><div class="panel-sub">Bu kartlar teknik formasyon tespitidir; tarihsel benzerlik motorunun başarı olasılığıyla karıştırılmamalıdır.</div><div id="cardPatternLibrary" class="library-grid"></div></div>
+<p class="warning">Karttaki oranlar yalnızca geçmiş benzer örneklerin sonuçlarını gösterir; geleceği garanti etmez. Testte hedef 2 ATR, stop 1 ATR ve 24 mumluk süre kullanılır. İşlem maliyeti hesaba katılır.</p>
+</section>
+<section id="detailView">
+<div class="card-toolbar"><button type="button" id="cardsBack">‹ Formasyon kartlarına dön</button><span class="panel-sub">Grafik ve detaylı analiz</span></div>
+<div class="brand">V<span>Crypto</span></div><button class="back" id="backBtn">‹ Coin analizi</button></header>
 <section class="heading"><p class="eyebrow">TEKNİK FORMASYON</p><div class="title">Olası gelecek senaryosu</div><div class="sub">Geçmiş mumlardan formasyon ara; olası fiyat yolunu grafikte gör.</div><div class="coin-line"><div><div class="coin-name" id="coinName">Coin</div><div class="sub" id="pair">—/USDT · Binance Spot</div></div><div class="price" id="currentPrice">—</div></div></section>
 <div class="error" id="error"></div>
 <section class="panel"><div class="panel-title">Fiyat ve projeksiyon grafiği</div><div class="panel-sub" id="chartSub">Canlı Binance mumları yükleniyor…</div><div class="controls" id="timeframes"><button class="tf active" data-view="4h">4 Saat</button><button class="tf" data-view="1h">1 Saat</button><button class="tf" data-view="1d">1 Gün</button><button class="tf" data-view="1w">1 Hafta</button><button class="tf" data-view="1m">1 Ay</button><button class="tf" data-view="1y">1 Yıl</button><button class="tf" data-view="5y">5 Yıl</button></div><div class="chart-wrap"><canvas id="chart" aria-label="Geçmiş fiyat mumları ve olası gelecek fiyat senaryosu"></canvas><div class="crosshair" id="crosshair"></div><div class="candle-readout" id="candleReadout" aria-live="polite">Mum seçildiğinde tarih, saat ve OHLC bilgileri burada görünür.</div></div><div class="legend"><span><i style="background:#21d6b0"></i>Yükseliş mumu</span><span><i style="background:#ff6579"></i>Düşüş mumu</span><span><i style="background:#f5c451"></i>Olası gelecek yolu</span><span><i style="background:#4ca8ff"></i>Hedef / destek</span></div></section>
@@ -72,9 +103,10 @@
 <div class="bt-controls"><label class="bt-field">Toplam işlem maliyeti (bps)<input id="btCost" type="number" min="0" max="300" step="1" value="20"></label><label class="bt-field">Maksimum işlem süresi (mum)<select id="btHorizon"><option value="12">12 mum</option><option value="24" selected>24 mum</option><option value="48">48 mum</option></select></label><button class="bt-run" id="btRun">Geçmiş testi çalıştır</button></div>
 <div id="backtestStatus">Test henüz çalıştırılmadı. Uzun zaman dilimlerinde yeterli geçmiş mum bulunmayabilir.</div><div id="backtestResults"></div></section>
 <section class="panel"><div class="panel-title">Nasıl yorumlanmalı?</div><p class="warning">Sarı çizgi bir kesin fiyat tahmini değil, tespit edilen formasyona ve mevcut volatiliteye dayalı senaryo çizimidir. Formasyon kırılımı gerçekleşmediyse sonuç teyitsizdir. Hedefler gerçekleşmeyebilir; kripto varlıklar yüksek risk taşır. Bu ekran yatırım tavsiyesi değildir.</p></section>
-</div>
+</section>>
 <script src="./pattern-engine.js"></script>
 <script src="./backtest-engine.js"></script>
+<script src="./historical-pattern-engine.js"></script>
 <script>
 'use strict';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
