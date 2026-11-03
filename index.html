@@ -688,7 +688,38 @@ coins.sort((a,b)=>(a.market_cap_rank||999999)-(b.market_cap_rank||999999));coins
 function setScreen(name){activeScreen=name;try{localStorage.setItem('vcryptoActiveScreen',name)}catch(e){}document.querySelectorAll('.screen').forEach(el=>el.classList.toggle('active',el.id==='screen-'+name));document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.screen===name));if(name==='market')renderMarket();if(name==='news')loadNews(false);if(name==='favorites')renderOtherLists();if(name==='wallet'&&typeof renderWallet==='function')renderWallet();if(name==='pattern')renderPatternSearch();if(name==='signal'&&!signalCache.length)runSignalScan();if(name==='analysis'){const frame=$('analysisFrame');frame.style.display='block';frame.style.visibility='visible';if(frame.dataset.loaded!=='1'){frame.src='./analysis.html?embed=1&v=47&symbol=BTC&name=Bitcoin';frame.dataset.loaded='1'}else{frame.contentWindow.postMessage({type:'vcrypto-resize-request'},location.origin);if(!frame.contentWindow.location.href.includes('analysis.html'))frame.src='./analysis.html?embed=1&v=47&symbol=BTC&name=Bitcoin'}}window.scrollTo({top:0,behavior:'smooth'})}
 let patternSearchTimer=null;
 let patternTimeframe='4h',patternScanToken=0;
+
 const patternCardCache=new Map();
+let patternCacheDbPromise=null;
+function openPatternCacheDb(){
+ if(!('indexedDB' in window))return Promise.resolve(null);
+ if(patternCacheDbPromise)return patternCacheDbPromise;
+ patternCacheDbPromise=new Promise(resolve=>{
+  try{
+   const request=indexedDB.open('vcrypto-pattern-cache',1);
+   request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains('klines'))db.createObjectStore('klines',{keyPath:'key'})};
+   request.onsuccess=()=>resolve(request.result);
+   request.onerror=()=>resolve(null);
+  }catch(e){resolve(null)}
+ });
+ return patternCacheDbPromise;
+}
+async function readPatternCache(key){
+ const db=await openPatternCacheDb();if(!db)return null;
+ return new Promise(resolve=>{
+  try{const request=db.transaction('klines','readonly').objectStore('klines').get(key);
+   request.onsuccess=()=>{const item=request.result;resolve(item&&item.expiresAt>Date.now()&&Array.isArray(item.raw)?item.raw:null)};
+   request.onerror=()=>resolve(null);
+  }catch(e){resolve(null)}
+ });
+}
+async function writePatternCache(key,raw){
+ const db=await openPatternCacheDb();if(!db)return;
+ return new Promise(resolve=>{
+  try{const tx=db.transaction('klines','readwrite');tx.objectStore('klines').put({key,raw,expiresAt:Date.now()+15*60*1000,savedAt:Date.now()});tx.oncomplete=()=>resolve();tx.onerror=()=>resolve();tx.onabort=()=>resolve();
+  }catch(e){resolve()}
+ });
+}
 let patternCardObserver=null;
 const patternTfConfig={'1h':{interval:'1h',limit:120,label:'1 saatlik'},'4h':{interval:'4h',limit:120,label:'4 saatlik'},'1d':{interval:'1d',limit:120,label:'1 günlük'},'1w':{interval:'1w',limit:120,label:'1 haftalık'},'1M':{interval:'1M',limit:100,label:'1 aylık'},'1y':{interval:'1w',limit:100,label:'1 yıllık · haftalık mumlar'}};
 function patternCardMarkup(c){return '<button type="button" class="pattern-coin-card" data-pattern-id="'+safe(c.id)+'" data-target-pct="-1"><div class="pattern-card-top"><img class="coin-icon" loading="lazy" src="'+safe(c.image||'./icon.svg')+'" alt="" onerror="this.src=\'./icon.svg\'"><span class="pattern-card-symbol">'+safe(String(c.symbol||'').toUpperCase())+'</span><span class="pattern-expected-move" data-expected-move>Hesaplanıyor…</span></div><strong>'+safe(c.name)+'</strong><div class="pattern-result" data-pattern-result><span class="pattern-result-state">Seçili zaman dilimi taranıyor…</span></div><span class="pattern-card-action">Formasyon grafiğini aç <b>›</b></span></button>'}
@@ -699,7 +730,12 @@ async function loadPatternCard(btn,token=patternScanToken){
  const symbol=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,''),cfg=patternTfConfig[patternTimeframe]||patternTfConfig['4h'],cacheKey=patternTimeframe+':'+symbol;
  try{
   let item=patternCardCache.get(cacheKey);
-  if(!item){const raw=await getBinanceKlines(symbol+'USDT',cfg.interval,cfg.limit);const candles=raw.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));item={raw,candles,patterns:window.VCryptoPatternEngine.scan(candles)};patternCardCache.set(cacheKey,item)}
+  if(!item){
+   let raw=await readPatternCache(cacheKey);
+   if(!raw){raw=await getBinanceKlines(symbol+'USDT',cfg.interval,cfg.limit);writePatternCache(cacheKey,raw)}
+   const candles=raw.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));
+   item={raw,candles,patterns:window.VCryptoPatternEngine.scan(candles)};patternCardCache.set(cacheKey,item)
+  }
   if(token!==patternScanToken)return;
   const {candles,patterns}=item,last=candles[candles.length-1];if(!last||candles.length<30)throw Error('Yeterli mum verisi yok');
   if(!patterns.length){btn.dataset.targetPct='-1';box.innerHTML='<span class="pattern-result-state">Belirgin formasyon tespit edilmedi</span><span class="pattern-result-direction neutral">Nötr · Sinyal yok</span>';btn.querySelector('[data-expected-move]').textContent='—';sortPatternCards();return}
