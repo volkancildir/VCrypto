@@ -668,13 +668,41 @@ coins=coins.filter(c=>{const sym=String(c.symbol||'').toUpperCase(),id=String(c.
 coins.sort((a,b)=>(a.market_cap_rank||999999)-(b.market_cap_rank||999999));coins=coins.slice(0,500);if(globalResult.status==='fulfilled'){globalData=globalResult.value.data||{};$('totalCap').textContent=compact(globalData.total_market_cap?.usd);$('totalVolume').textContent=compact(globalData.total_volume?.usd);$('btcDominance').textContent=Number.isFinite(Number(globalData.market_cap_percentage?.btc))?Number(globalData.market_cap_percentage.btc).toFixed(1)+'%':'—';$('coinCount').textContent=new Intl.NumberFormat('tr-TR').format(globalData.active_cryptocurrencies||0);const change=Number(globalData.market_cap_change_percentage_24h_usd);$('globalChange').textContent='24s '+pct(change);$('globalChange').classList.toggle('down',change<0)}else{$('totalCap').textContent='—';$('totalVolume').textContent='—';$('btcDominance').textContent='—';$('coinCount').textContent='—';$('globalChange').textContent='24s —';$('globalChange').classList.remove('down')}if(!coins.length)throw Error('Piyasa sağlayıcısı boş veri döndürdü.');$('statusText').textContent=globalResult.status==='fulfilled'?'Canlı':'Fiyatlar canlı';$('liveDot').style.background='var(--green)';if(globalResult.status!=='fulfilled'){$('errorBox').textContent='Coin fiyatları geldi; genel piyasa özeti şu anda alınamadı.';$('errorBox').style.display='block'}renderAll();if(activeScreen==='wallet'&&typeof renderWallet==='function')renderWallet()}catch(e){$('statusText').textContent='Bağlantı yok';$('liveDot').style.background='var(--red)';$('errorBox').textContent='Piyasa verileri alınamadı: '+(e&&e.message?e.message:'Bağlantı hatası')+' İnternet bağlantını kontrol edip yeniden dene.';$('errorBox').style.display='block';if(!coins.length){renderList('coinRows',[],'Veriler şu anda yüklenemiyor. Yenile düğmesini kullan.');renderOtherLists()}}finally{busy=false;btn.disabled=false}}
 function setScreen(name){activeScreen=name;try{localStorage.setItem('vcryptoActiveScreen',name)}catch(e){}document.querySelectorAll('.screen').forEach(el=>el.classList.toggle('active',el.id==='screen-'+name));document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.screen===name));if(name==='market')renderMarket();if(name==='news')loadNews(false);if(name==='favorites')renderOtherLists();if(name==='wallet'&&typeof renderWallet==='function')renderWallet();if(name==='pattern')renderPatternSearch();if(name==='signal'&&!signalCache.length)runSignalScan();if(name==='analysis'){const frame=$('analysisFrame');frame.style.display='block';frame.style.visibility='visible';if(frame.dataset.loaded!=='1'){frame.src='./analysis.html?embed=1&v=47&symbol=BTC&name=Bitcoin';frame.dataset.loaded='1'}else{frame.contentWindow.postMessage({type:'vcrypto-resize-request'},location.origin);if(!frame.contentWindow.location.href.includes('analysis.html'))frame.src='./analysis.html?embed=1&v=47&symbol=BTC&name=Bitcoin'}}window.scrollTo({top:0,behavior:'smooth'})}
 let patternSearchTimer=null;
+const patternCardCache=new Map();
+let patternCardObserver=null;
+function patternCardMarkup(c){
+ return '<button type="button" class="pattern-coin-card" data-pattern-id="'+safe(c.id)+'"><div class="pattern-card-top"><img class="coin-icon" loading="lazy" src="'+safe(c.image||'./icon.svg')+'" alt="" onerror="this.src=\'./icon.svg\'"><span class="pattern-card-symbol">'+safe(String(c.symbol||'').toUpperCase())+'</span></div><strong>'+safe(c.name)+'</strong><div class="pattern-result" data-pattern-result><span class="pattern-result-state">Formasyon analizi bekleniyor…</span></div><span class="pattern-card-action">Formasyon grafiğini aç <b>›</b></span></button>';
+}
+async function loadPatternCard(btn){
+ const id=btn.dataset.patternId,coin=coins.find(c=>c.id===id),box=btn.querySelector('[data-pattern-result]');if(!coin||!box||btn.dataset.loaded==='1')return;
+ btn.dataset.loaded='1';
+ const symbol=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+ try{
+  let patterns=patternCardCache.get(symbol);
+  if(!patterns){
+   const raw=await getBinanceKlines(symbol+'USDT','4h',120);
+   const candles=raw.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));
+   patterns=window.VCryptoPatternEngine.scan(candles);
+   patternCardCache.set(symbol,patterns);
+  }
+  if(!patterns.length){box.innerHTML='<span class="pattern-result-state">Belirgin formasyon tespit edilmedi</span><span class="pattern-result-direction neutral">Nötr / Sinyal yok</span>';return}
+  const sorted=patterns.slice().sort((x,y)=>(Number(y.confirmed)-Number(x.confirmed))||y.score-x.score);
+  const p=sorted[0],direction=p.direction>0?'Yukarı yönlü':p.direction<0?'Aşağı yönlü':'Yönsüz';
+  const cls=p.direction>0?'up':p.direction<0?'down':'neutral';
+  box.innerHTML='<span class="pattern-result-name">'+safe(p.name)+'</span><span class="pattern-result-direction '+cls+'">'+direction+'</span><span class="pattern-result-meta">'+(p.confirmed?'Teyitli yapı':'Teyit bekliyor')+' · Tespit puanı '+p.score+'/5</span>';
+ }catch(err){box.innerHTML='<span class="pattern-result-state">Formasyon verisi alınamadı</span>'}
+}
 function renderPatternSearch(){
  const q=($('patternSearch')?.value||'').trim().toLowerCase();
  const list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q));
- const money=v=>Number.isFinite(Number(v))?Number(v).toLocaleString('en-US',{maximumFractionDigits:Number(v)<1?6:2}):'—';
- const change=v=>Number.isFinite(Number(v))?(Number(v)>0?'+':'')+Number(v).toFixed(2)+'%':'—';
- $('patternSearchRows').innerHTML=list.slice(0,q?500:100).map(c=>'<button type="button" class="pattern-coin-card" data-pattern-id="'+safe(c.id)+'"><div class="pattern-card-top"><img class="coin-icon" loading="lazy" src="'+safe(c.image||'./icon.svg')+'" alt="" onerror="this.src=\'./icon.svg\'"><span class="pattern-card-rank">#'+(c.market_cap_rank||'—')+'</span></div><strong>'+safe(c.name)+'</strong><span class="pattern-card-symbol">'+safe(String(c.symbol||'').toUpperCase())+'</span><div class="pattern-card-info"><span>Fiyat</span><b>$'+money(c.current_price)+'</b></div><div class="pattern-card-info"><span>24 saat</span><b class="'+(Number(c.price_change_percentage_24h)>=0?'positive':'negative')+'">'+change(c.price_change_percentage_24h)+'</b></div><span class="pattern-card-action">Formasyon grafiğini aç <b>›</b></span></button>').join('')||'<div class="empty">Coin bulunamadı.</div>';
- $('patternSearchRows').querySelectorAll('[data-pattern-id]').forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));
+ $('patternSearchRows').innerHTML=list.slice(0,q?500:100).map(patternCardMarkup).join('')||'<div class="empty">Coin bulunamadı.</div>';
+ if(patternCardObserver)patternCardObserver.disconnect();
+ const buttons=[...$('patternSearchRows').querySelectorAll('[data-pattern-id]')];
+ if('IntersectionObserver' in window){
+  patternCardObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){patternCardObserver.unobserve(entry.target);loadPatternCard(entry.target)}}),{rootMargin:'500px 0px'});
+  buttons.forEach(btn=>patternCardObserver.observe(btn));
+ }else buttons.slice(0,8).forEach(loadPatternCard);
+ buttons.forEach(btn=>btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId)));
 }
 function openPatternCoin(id){
  const coin=coins.find(c=>c.id===id);if(!coin)return;
@@ -1011,6 +1039,7 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.
 
 <script src="./wallet.js?v=16"></script>
 <script src="./paper-trader.js?v=7"></script>
+<script src="./pattern-engine.js"></script>
 </body>
 </html>
 <style>
@@ -1177,4 +1206,16 @@ body{zoom:1.12}
 #screen-pattern .pattern-card-action b{font-size:20px}
 @media(max-width:370px){#screen-pattern #patternSearchRows{gap:9px}#screen-pattern .pattern-coin-card{min-height:250px;padding:13px 11px}#screen-pattern .pattern-coin-card>strong{font-size:17px}}
 
+
+#screen-pattern .pattern-coin-card{min-height:290px}
+#screen-pattern .pattern-card-top{align-items:center}
+#screen-pattern .pattern-card-symbol{font-size:13px;color:#91a9c0}
+#screen-pattern .pattern-result{display:flex;flex-direction:column;gap:8px;min-height:112px;padding:10px 0;border-top:1px solid #29445e;border-bottom:1px solid #29445e}
+#screen-pattern .pattern-result-state{font-size:13px;color:#91a9c0;line-height:1.4}
+#screen-pattern .pattern-result-name{font-size:16px;font-weight:900;line-height:1.3;overflow-wrap:anywhere}
+#screen-pattern .pattern-result-direction{font-size:14px;font-weight:900}
+#screen-pattern .pattern-result-direction.up{color:#35d98b}
+#screen-pattern .pattern-result-direction.down{color:#ff6579}
+#screen-pattern .pattern-result-direction.neutral{color:#f5c451}
+#screen-pattern .pattern-result-meta{font-size:12px;color:#91a9c0;line-height:1.4}
 </style>
