@@ -3,6 +3,8 @@ name: Deploy VCrypto to GitHub Pages
 on:
   push:
     branches: ["main"]
+    paths-ignore:
+      - "paper-portfolio.json"
   workflow_dispatch:
 
 permissions:
