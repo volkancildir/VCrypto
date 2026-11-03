@@ -52,12 +52,12 @@ function wilsonLower(w,n,z=1.96){
  if(!n)return 0;const p=w/n,z2=z*z,den=1+z2/n;
  return (p+z2/(2*n)-z*Math.sqrt((p*(1-p)+z2/(4*n))/n))/den;
 }
-function scan(data,{window=30,horizon=24,costBps=20,minMatches=30,maxCandidates=500,maxNeighbors=80,maxDistance=1.15,minWinRate=.62,minWilson=.48,targetR=2,stopR=1}={}){
+function scan(data,{window=30,horizon=24,costBps=20,minMatches=30,maxCandidates=180,maxNeighbors=60,maxDistance=1.15,minWinRate=.62,minWilson=.48,targetR=2,stopR=1}={}){
  const empty={status:'insufficient',matches:0,winRate:null,direction:0,confidence:null,reason:'Tarihsel benzerlik için yeterli geçmiş mum bulunamadı.'};
  if(!Array.isArray(data)||data.length<window+horizon+100)return empty;
  const end=data.length-1,current=features(data,end-window+1,window),candidates=[];
  const first=Math.max(window+30,Math.floor(data.length*.2)),last=end-horizon-2;
- for(let i=first;i<=last;i+=2){
+ for(let i=first;i<=last;i+=4){
   if(i+window>=end-horizon)continue;
   const dist=dtw(current,features(data,i-window+1,window));
   if(Number.isFinite(dist))candidates.push({index:i,distance:dist});
