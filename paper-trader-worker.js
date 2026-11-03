@@ -59,6 +59,8 @@ async function main(){
   for(const interval of ['4h','1h']){
    if((interval==='4h'&&!due4)||(interval==='1h'&&!due1))continue;
    let next=0,opened=0,closed=0,failed=0;
+   // Her sanal portföy için eşzamanlı taramalarda çift satış/alımı önle.
+   const rotationLocks=Object.fromEntries(STRATEGIES.map(k=>[k,false]));
    async function worker(){
     while(next<coins.length){
      const coin=coins[next++];
@@ -89,33 +91,60 @@ async function main(){
         }
         continue;
        }
-       if(!isNew||book.positions.length>=MAX_POSITIONS||book.positions.some(p=>p.symbol===symbol))continue;
+       if(!isNew||book.positions.some(p=>p.symbol===symbol))continue;
        const analysis=analyze(candles,E);
-       if(!analysis||!allowed(strategy,analysis))continue;
-       const ticker=await binance('ticker/price?symbol='+symbol+'USDT');
-       const entry=Number(ticker.price);
-       if(!(entry>0))continue;
-       const lv=levels(strategy,analysis,entry);
-       const total=equity(book,rate);
-       const riskUsd=total*RISK*rate;
-       const allocUsd=total*MAX_ALLOC*rate;
-       const cashUsd=book.cash*rate;
-       const qty=Math.min(
-        riskUsd/Math.max(entry-lv.stop,entry*.0005),
-        allocUsd/entry,
-        cashUsd/(entry*(1+FEE))
-       );
-       const costTL=qty*entry/rate*(1+FEE);
-       if(!(qty>0)||!Number.isFinite(costTL)||costTL>book.cash)continue;
-       book.cash-=costTL;
-       book.positions.push({
+       if(!analysis||!allowed(strategy,analysis)||rotationLocks[strategy])continue;
+       rotationLocks[strategy]=true;
+       try{
+        const ticker=await binance('ticker/price?symbol='+symbol+'USDT');
+        const entry=Number(ticker.price);
+        if(!(entry>0))continue;
+        const lv=levels(strategy,analysis,entry);
+        const total=equity(book,rate);
+        const riskUsd=total*RISK*rate;
+        const allocUsd=total*MAX_ALLOC*rate;
+        const desiredQty=Math.min(
+         riskUsd/Math.max(entry-lv.stop,entry*.0005),
+         allocUsd/entry
+        );
+        const desiredCostTL=desiredQty*entry/rate*(1+FEE);
+        // Yeni fırsatı, eldeki pozisyonların hedefe kalan net getirisiyle kıyasla.
+        // Yalnızca daha iyi fırsat varsa ve yeterli nakit/pozisyon yeri yoksa rotasyon yap.
+        if(book.cash<desiredCostTL*0.90||book.positions.length>=MAX_POSITIONS){
+         const newNetPct=((lv.target/entry)*(1-FEE)/(1+FEE)-1)*100;
+         const candidates=book.positions.map(p=>{
+          const live=livePrices.get(p.symbol)||p.lastPrice||p.entry;
+          const remainingNetPct=((p.target/live)*(1-FEE)/(1+FEE)-1)*100;
+          const exitValue=p.qty*live/rate*(1-FEE);
+          const exitPnl=exitValue-p.costTL;
+          return {p,live,remainingNetPct,exitPnl};
+         }).filter(x=>x.remainingNetPct+0.75<newNetPct);
+         // Uygun pozisyonlar arasından satış anındaki zararı en az olanı seç.
+         candidates.sort((a,b)=>b.exitPnl-a.exitPnl);
+         const chosen=candidates[0];
+         if(chosen){
+          chosen.p.lastPrice=chosen.live;
+          closePos(book,chosen.p,chosen.live,'Daha güçlü yeni fırsat için pozisyon rotasyonu',rate);
+          closed++;
+         }
+        }
+        if(book.positions.length>=MAX_POSITIONS||book.cash<desiredCostTL*0.90)continue;
+        const cashUsd=book.cash*rate;
+        const qty=Math.min(desiredQty,cashUsd/(entry*(1+FEE)));
+        const costTL=qty*entry/rate*(1+FEE);
+        if(!(qty>0)||!Number.isFinite(costTL)||costTL>book.cash)continue;
+        book.cash-=costTL;
+        book.positions.push({
         id:strategy+'-'+interval+'-'+symbol+'-'+last.t,
         strategy,symbol,name:coin.name,timeframe:interval,qty,entry,lastPrice:entry,
         target:lv.target,stop:lv.stop,costTL,
         pattern:analysis.pattern&&analysis.pattern.name||(strategy==='alSat'?'Al/Sat sinyali':'Yükseliş formasyonu'),
         openedAt:Date.now(),entryBar:last.t
        });
-       opened++;
+        opened++;
+       }finally{
+        rotationLocks[strategy]=false;
+       }
       }
       if(isNew)s.lastBars[key]=last.t;
      }catch(e){
