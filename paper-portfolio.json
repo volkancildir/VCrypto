@@ -29,7 +29,7 @@
           "timeframe": "1h",
           "qty": 280.5828033155251,
           "entry": 0.14158,
-          "lastPrice": 0.14158,
+          "lastPrice": 0.14171,
           "target": 0.14269,
           "stop": 0.1408,
           "costTL": 1987.933720277231,
@@ -101,13 +101,13 @@
         }
       ],
       "summary": {
-        "equityTL": 9925.766966978621,
-        "pnlTL": -74.23303302137901,
-        "returnPct": -0.7423303302137918,
+        "equityTL": 9927.588658158273,
+        "pnlTL": -72.41134184172734,
+        "returnPct": -0.7241134184172715,
         "realizedTL": -66.26113747637112,
         "openPositions": 2,
         "cashTL": 5943.805142246399,
-        "exposureTL": 3981.961824732222
+        "exposureTL": 3983.783515911874
       }
     },
     "formasyon": {
@@ -122,7 +122,7 @@
           "timeframe": "4h",
           "qty": 0.0005205318360919335,
           "entry": 76856.01,
-          "lastPrice": 77348,
+          "lastPrice": 77784.35,
           "target": 80888.564,
           "stop": 75889.06086153847,
           "costTL": 2001.9999999999998,
@@ -138,7 +138,7 @@
           "timeframe": "4h",
           "qty": 31.89249350027913,
           "entry": 1.2539,
-          "lastPrice": 1.2813,
+          "lastPrice": 1.2879,
           "target": 1.35274,
           "stop": 1.2193416923076923,
           "costTL": 2001.1991999999998,
@@ -154,7 +154,7 @@
           "timeframe": "4h",
           "qty": 0.7412201298156871,
           "entry": 53.93,
-          "lastPrice": 54.59,
+          "lastPrice": 54.92,
           "target": 58.827,
           "stop": 52.817276923076925,
           "costTL": 2000.3987203199997,
@@ -170,7 +170,7 @@
           "timeframe": "4h",
           "qty": 0.01023399309512238,
           "entry": 3904.44,
-          "lastPrice": 3923.75,
+          "lastPrice": 3954.45,
           "target": 4061.2239999999997,
           "stop": 3836.0678615384613,
           "costTL": 1999.5985608318724,
@@ -186,7 +186,7 @@
           "timeframe": "4h",
           "qty": 787.0248250274204,
           "entry": 0.0507,
-          "lastPrice": 0.0513,
+          "lastPrice": 0.051,
           "target": 0.05244,
           "stop": 0.04944861538461539,
           "costTL": 1996.803518848128,
@@ -197,13 +197,13 @@
       ],
       "trades": [],
       "summary": {
-        "equityTL": 10094.33785123634,
-        "pnlTL": 94.3378512363397,
-        "returnPct": 0.9433785123633909,
+        "equityTL": 10132.309305709401,
+        "pnlTL": 132.3093057094011,
+        "returnPct": 1.3230930570940158,
         "realizedTL": 0,
         "openPositions": 5,
         "cashTL": 0,
-        "exposureTL": 10094.33785123634
+        "exposureTL": 10132.309305709401
       }
     },
     "birlesik": {
@@ -858,13 +858,13 @@
     "1h": 1793707200000
   },
   "fxRate": 0.020003,
-  "updatedAt": "2026-11-03T13:03:52.450Z",
+  "updatedAt": "2026-11-03T13:32:50.211Z",
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
-    "equityTL": 30020.10481821496,
-    "pnlTL": 20.104818214960687,
-    "returnPct": 0.06701606071652932,
+    "equityTL": 30059.897963867676,
+    "pnlTL": 59.89796386767375,
+    "returnPct": 0.19965987955892217,
     "openPositions": 7
   }
 }
