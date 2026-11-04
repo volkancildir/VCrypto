@@ -1111,8 +1111,9 @@ function renderAltcoinRotation(latestResult,historyResult,marketsResult,ethBtcRe
  $('rotationEthBtc').textContent=Number.isFinite(ethChange)?pct(ethChange):'Veri yok';
  $('rotationEthBtc').style.color=Number.isFinite(ethChange)?(ethChange>=0?'#0ecb81':'#f6465d'):'#81909f';
  const stable=new Set(['USDT','USDC','BUSD','DAI','FDUSD','TUSD','USDE','USDS','USDD','PYUSD','RLUSD','GUSD','USDP','FRAX','LUSD','USD1','UST','USTC']);
+ const wrapped=new Set(['WBTC','WETH','STETH','WSTETH','CBETH','RETH','BTCB','BBTC']);
  const listing=marketsResult.status==='fulfilled'&&Array.isArray(marketsResult.value.data)?marketsResult.value.data:[];
- const top=listing.filter(c=>Number(c.cmc_rank)>=1&&Number(c.cmc_rank)<=100&&String(c.symbol||'').toUpperCase()!=='BTC'&&!stable.has(String(c.symbol||'').toUpperCase()));
+ const top=listing.filter(c=>Number(c.cmc_rank)>=1&&Number(c.cmc_rank)<=100&&String(c.symbol||'').toUpperCase()!=='BTC'&&!stable.has(String(c.symbol||'').toUpperCase())&&!wrapped.has(String(c.symbol||'').toUpperCase()));
  const btc=listing.find(c=>String(c.symbol||'').toUpperCase()==='BTC');
  const btcChange=Number(btc?.quote?.USD?.percent_change_24h);
  const outperform=Number.isFinite(btcChange)?top.filter(c=>Number(c.quote?.USD?.percent_change_24h)>btcChange).length:NaN;
