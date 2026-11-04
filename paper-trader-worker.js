@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),https=require('https'),vm=require('vm');
-const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,RISK=.01,MAX_ALLOC=.20;
+const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,RISK=.01,MAX_ALLOC=.20,MAX_PORTFOLIO_RISK=.05;
 const STRATEGIES=['alSat','formasyon','birlesik'];
 const EXCLUDED=new Set(['USDT','USDC','BUSD','FDUSD','TUSD','DAI','USDE','USDS','USD1','PYUSD','EURC','USTC','USDD','FRAX','USDP','USDX','WBTC','STETH','WSTETH']);
 function get(url,timeout=15000){return new Promise((resolve,reject)=>{const req=https.get(url,{headers:{'user-agent':'VCrypto-paper-simulation/2.0','accept':'application/json'}},res=>{let b='';res.setEncoding('utf8');res.on('data',x=>b+=x);res.on('end',()=>{if(res.statusCode<200||res.statusCode>=300)return reject(Error('HTTP '+res.statusCode+' '+url));try{resolve(JSON.parse(b))}catch(e){reject(e)}})});req.setTimeout(timeout,()=>req.destroy(Error('timeout')));req.on('error',reject)})}
@@ -104,8 +104,12 @@ async function main(){
         const total=equity(book,rate);
         const riskUsd=total*RISK*rate;
         const allocUsd=total*MAX_ALLOC*rate;
+        const stopDistance=Math.max(entry-lv.stop,entry*.0005);
+        const openRiskUsd=book.positions.reduce((sum,p)=>sum+Math.max(0,Number(p.qty)||0)*Math.max(0,(Number(p.entry)||0)-(Number(p.stop)||0)),0);
+        const remainingPortfolioRiskUsd=Math.max(0,total*MAX_PORTFOLIO_RISK*rate-openRiskUsd);
         const desiredQty=Math.min(
-         riskUsd/Math.max(entry-lv.stop,entry*.0005),
+         riskUsd/stopDistance,
+         remainingPortfolioRiskUsd/stopDistance,
          allocUsd/entry
         );
         const desiredCostTL=desiredQty*entry/rate*(1+FEE);
