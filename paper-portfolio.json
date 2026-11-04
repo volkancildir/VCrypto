@@ -13,7 +13,7 @@
           "timeframe": "4h",
           "qty": 572.1174447494765,
           "entry": 0.04659,
-          "lastPrice": 0.04622,
+          "lastPrice": 0.04607,
           "target": 0.051727333333333333,
           "stop": 0.043122,
           "costTL": 1335.0148455233154,
@@ -29,7 +29,7 @@
           "timeframe": "1h",
           "qty": 195.89593160861398,
           "entry": 0.203,
-          "lastPrice": 0.1991,
+          "lastPrice": 0.1987,
           "target": 0.22414,
           "stop": 0.19362,
           "costTL": 1991.726257913799,
@@ -45,7 +45,7 @@
           "timeframe": "4h",
           "qty": 7622322.0284373015,
           "entry": 0.00000513,
-          "lastPrice": 0.00000497,
+          "lastPrice": 0.00000494,
           "target": 0.000005542,
           "stop": 0.000004890999999999999,
           "costTL": 1958.4516420438924,
@@ -61,7 +61,7 @@
           "timeframe": "1h",
           "qty": 4.230662233400018,
           "entry": 9.06,
-          "lastPrice": 9.04,
+          "lastPrice": 8.93,
           "target": 9.425333333333333,
           "stop": 8.856,
           "costTL": 1919.750306936794,
@@ -77,7 +77,7 @@
           "timeframe": "1h",
           "qty": 18.641292787983705,
           "entry": 2.036,
-          "lastPrice": 2.036,
+          "lastPrice": 2.014,
           "target": 2.0947999999999998,
           "stop": 2.0023999999999997,
           "costTL": 1900.911927771998,
@@ -509,18 +509,18 @@
         }
       ],
       "summary": {
-        "equityTL": 9489.151852383156,
-        "pnlTL": -510.84814761684356,
-        "returnPct": -5.108481476168436,
+        "equityTL": 9425.754543753044,
+        "pnlTL": -574.2454562469557,
+        "returnPct": -5.742454562469557,
         "realizedTL": -378.6957352111457,
         "openPositions": 5,
         "cashTL": 515.4492845990565,
-        "exposureTL": 8973.7025677841
+        "exposureTL": 8910.305259153987
       }
     },
     "formasyon": {
       "initial": 10000,
-      "cash": 1567.1443733187627,
+      "cash": 3485.7627677732235,
       "positions": [
         {
           "id": "formasyon-4h-LSK-1793764800000",
@@ -530,7 +530,7 @@
           "timeframe": "4h",
           "qty": 36.99932229838344,
           "entry": 0.1977,
-          "lastPrice": 0.1991,
+          "lastPrice": 0.1987,
           "target": 0.35640000000000005,
           "stop": 0.145348,
           "costTL": 366.3604915645349,
@@ -546,7 +546,7 @@
           "timeframe": "4h",
           "qty": 1637.6124393306902,
           "entry": 0.02383,
-          "lastPrice": 0.02373,
+          "lastPrice": 0.02352,
           "target": 0.029380000000000003,
           "stop": 0.02303446153846154,
           "costTL": 1954.5346109116178,
@@ -562,7 +562,7 @@
           "timeframe": "4h",
           "qty": 143.41779561129695,
           "entry": 0.2759,
-          "lastPrice": 0.2736,
+          "lastPrice": 0.2735,
           "target": 0.33830999999999994,
           "stop": 0.26652292307692305,
           "costTL": 1981.814208894525,
@@ -578,29 +578,13 @@
           "timeframe": "4h",
           "qty": 308.2328212023428,
           "entry": 0.1281,
-          "lastPrice": 0.126,
+          "lastPrice": 0.1254,
           "target": 0.15399000000000002,
           "stop": 0.12387784615384614,
           "costTL": 1977.589763855505,
           "pattern": "Düşen takoz yukarı kırılımı",
           "openedAt": 1793809538719,
           "entryBar": 1793793600000
-        },
-        {
-          "id": "formasyon-1h-RAY-1793815200000",
-          "strategy": "formasyon",
-          "symbol": "RAY",
-          "name": "Raydium",
-          "timeframe": "1h",
-          "qty": 22.11875444660576,
-          "entry": 1.758,
-          "lastPrice": 1.758,
-          "target": 1.9886000000000001,
-          "stop": 1.735355,
-          "costTL": 1947.5460365981214,
-          "pattern": "Yatay direnç kırılımı",
-          "openedAt": 1793819054803,
-          "entryBar": 1793815200000
         }
       ],
       "trades": [
@@ -1563,38 +1547,37 @@
           "reason": "Daha güçlü yeni fırsat için pozisyon rotasyonu",
           "openedAt": 1793819054459,
           "closedAt": 1793819054803
+        },
+        {
+          "strategy": "formasyon",
+          "symbol": "RAY",
+          "timeframe": "1h",
+          "entry": 1.758,
+          "exit": 1.735355,
+          "qty": 22.11875444660576,
+          "costTL": 1947.5460365981214,
+          "proceedsTL": 1918.6183944544607,
+          "pnl": -28.927642143660705,
+          "returnPct": -1.4853380407987737,
+          "reason": "Zarar-kes (canlı fiyat kontrolü)",
+          "openedAt": 1793819054803,
+          "closedAt": 1793822265312
         }
       ],
       "summary": {
-        "equityTL": 9724.110979937475,
-        "pnlTL": -275.88902006252465,
-        "returnPct": -2.7588902006252414,
-        "realizedTL": -205.01051485693233,
-        "openPositions": 5,
-        "cashTL": 1567.1443733187627,
-        "exposureTL": 8156.966606618713
+        "equityTL": 9671.183923553166,
+        "pnlTL": -328.8160764468339,
+        "returnPct": -3.2881607644683397,
+        "realizedTL": -233.93815700059304,
+        "openPositions": 4,
+        "cashTL": 3485.7627677732235,
+        "exposureTL": 6185.421155779943
       }
     },
     "birlesik": {
       "initial": 10000,
-      "cash": 2118.2841448986005,
+      "cash": 2937.280673489869,
       "positions": [
-        {
-          "id": "birlesik-1h-SXT-1793800800000",
-          "strategy": "birlesik",
-          "symbol": "SXT",
-          "name": "Space and Time",
-          "timeframe": "1h",
-          "qty": 1869.242994683131,
-          "entry": 0.00982,
-          "lastPrice": 0.00887,
-          "target": 0.01081,
-          "stop": 0.008765499999999999,
-          "costTL": 919.3596604621303,
-          "pattern": "Yatay direnç kırılımı",
-          "openedAt": 1793806239373,
-          "entryBar": 1793800800000
-        },
         {
           "id": "birlesik-4h-PEPE-1793793600000",
           "strategy": "birlesik",
@@ -1603,7 +1586,7 @@
           "timeframe": "4h",
           "qty": 3615274.5912462464,
           "entry": 0.00000513,
-          "lastPrice": 0.00000497,
+          "lastPrice": 0.00000494,
           "target": 0.000006128999999999999,
           "stop": 0.000004588553846153847,
           "costTL": 928.8954774215117,
@@ -1619,7 +1602,7 @@
           "timeframe": "1h",
           "qty": 0.01610753355161369,
           "entry": 2430.05,
-          "lastPrice": 2423.09,
+          "lastPrice": 2406.67,
           "target": 2586.5499999999997,
           "stop": 2362.916,
           "costTL": 1960.4350054541153,
@@ -1635,7 +1618,7 @@
           "timeframe": "1h",
           "qty": 0.009596964415337916,
           "entry": 4062.13,
-          "lastPrice": 4056.73,
+          "lastPrice": 4053.91,
           "target": 4174.0199999999995,
           "stop": 4033.225,
           "costTL": 1952.5218241537618,
@@ -1651,7 +1634,7 @@
           "timeframe": "1h",
           "qty": 19.004845549716254,
           "entry": 2.036,
-          "lastPrice": 2.036,
+          "lastPrice": 2.014,
           "target": 2.191,
           "stop": 2.00765,
           "costTL": 1937.9845594296762,
@@ -1750,16 +1733,31 @@
           "reason": "Daha güçlü yeni fırsat için pozisyon rotasyonu",
           "openedAt": 1793785467547,
           "closedAt": 1793819054626
+        },
+        {
+          "strategy": "birlesik",
+          "symbol": "SXT",
+          "timeframe": "1h",
+          "entry": 0.00982,
+          "exit": 0.008765499999999999,
+          "qty": 1869.242994683131,
+          "costTL": 919.3596604621303,
+          "proceedsTL": 818.9965285912684,
+          "pnl": -100.36313187086182,
+          "returnPct": -10.916634282214726,
+          "reason": "Zarar-kes (canlı fiyat kontrolü)",
+          "openedAt": 1793806239373,
+          "closedAt": 1793822265312
         }
       ],
       "summary": {
-        "equityTL": 9676.227619541958,
-        "pnlTL": -323.7723804580419,
-        "returnPct": -3.237723804580417,
-        "realizedTL": -182.51932818020487,
-        "openPositions": 5,
-        "cashTL": 2118.2841448986005,
-        "exposureTL": 7557.943474643358
+        "equityTL": 9625.570338271522,
+        "pnlTL": -374.4296617284781,
+        "returnPct": -3.7442966172847814,
+        "realizedTL": -282.8824600510667,
+        "openPositions": 4,
+        "cashTL": 2937.280673489869,
+        "exposureTL": 6688.289664781652
       }
     }
   },
@@ -2403,13 +2401,13 @@
     "1h": 1793815200000
   },
   "fxRate": 0.019986,
-  "updatedAt": "2026-11-04T19:04:25.008Z",
+  "updatedAt": "2026-11-04T19:57:45.632Z",
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
-    "equityTL": 28889.490451862588,
-    "pnlTL": -1110.50954813741,
-    "returnPct": -3.701698493791372,
-    "openPositions": 15
+    "equityTL": 28722.50880557773,
+    "pnlTL": -1277.4911944222677,
+    "returnPct": -4.258303981407563,
+    "openPositions": 13
   }
 }
