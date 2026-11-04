@@ -14,10 +14,26 @@ function blank(){return {initial:30000,strategies:{alSat:blankBook(),formasyon:b
 function readState(){try{const old=JSON.parse(fs.readFileSync(STATE_FILE,'utf8'));if(old.strategies)return {...blank(),...old,strategies:Object.fromEntries(STRATEGIES.map(k=>[k,{...blankBook(),...(old.strategies[k]||{})}]))}}catch(e){}return blank()}
 function equity(b,rate){return b.cash+b.positions.reduce((a,p)=>a+p.qty*p.lastPrice/rate*(1-FEE),0)}
 function closePos(b,p,price,reason,rate){const i=b.positions.findIndex(x=>x.id===p.id);if(i<0)return;const proceeds=p.qty*price/rate*(1-FEE),pnl=proceeds-p.costTL;b.cash+=proceeds;b.trades.push({strategy:p.strategy,symbol:p.symbol,timeframe:p.timeframe,entry:p.entry,exit:price,qty:p.qty,costTL:p.costTL,proceedsTL:proceeds,pnl,returnPct:p.costTL?pnl/p.costTL*100:0,reason,openedAt:p.openedAt,closedAt:Date.now()});b.positions.splice(i,1)}
-function analyze(candles,E){const series=E.buildSignalSeries(candles),opt=E.optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)return null;const entry=series.c[i],pattern=E.detectChartPattern(candles),trs=[];for(let j=Math.max(1,candles.length-15);j<candles.length;j++){const k=candles[j],pc=series.c[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-pc),Math.abs(k.l-pc)))}const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:entry*.03,validated=opt.trainTrades>=3&&!!(opt.train&&opt.train.net>0)&&opt.test.trades>=3&&opt.test.net>0;const stop=entry-1.5*atr,target=entry+2*atr,rr=(target-entry)/Math.max(entry-stop,1e-9);const alSignal=score>=opt.threshold&&validated&&rr>=1.2?'AL':score<=-opt.threshold?'SAT':'NÖTR';return {alSignal,pattern,validated,atr,atrTarget:target,atrStop:stop,score}}
+function analyze(candles,E){const series=E.buildSignalSeries(candles),opt=E.optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)return null;const entry=series.c[i],pattern=E.detectChartPattern(candles),trs=[];for(let j=Math.max(1,candles.length-15);j<candles.length;j++){const k=candles[j],pc=series.c[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-pc),Math.abs(k.l-pc)))}const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:entry*.03,validated=opt.trainTrades>=3&&!!(opt.train&&opt.train.net>0)&&opt.test.trades>=3&&opt.test.net>0;const stop=entry-1.5*atr,target=entry+2*atr,rr=(target-entry)/Math.max(entry-stop,1e-9);const alSignal=score>=opt.threshold&&validated&&rr>=1.2?'AL':score<=-opt.threshold?'SAT':'NÖTR';return {alSignal,pattern,validated,atr,atrTarget:target,atrStop:stop,score,threshold:opt.threshold}}
 function allowed(strategy,a){const bull=!!(a.pattern&&a.pattern.direction===1);if(strategy==='alSat')return a.alSignal==='AL';if(strategy==='formasyon')return bull;if(strategy==='birlesik')return a.alSignal==='AL'&&bull;return false}
 function shouldExit(strategy,a){if(strategy==='alSat')return a.alSignal==='SAT';if(strategy==='formasyon')return !!(a.pattern&&a.pattern.direction===-1);return a.alSignal==='SAT'||!!(a.pattern&&a.pattern.direction===-1)}
 function levels(strategy,a,entry){let stop=strategy!=='alSat'&&a.pattern?Number(a.pattern.stop):a.atrStop,target=strategy!=='alSat'&&a.pattern&&a.pattern.targets?Number(a.pattern.targets[0]):a.atrTarget;if(!(stop>0&&stop<entry))stop=entry-1.5*a.atr;if(!(target>entry))target=entry+2*a.atr;return {stop,target}}
+function classifyBtcRegime(candles){
+ const c=candles.map(x=>x.c);
+ const emaAt=(values,period,end)=>{if(end+1<period)return null;let v=values.slice(0,period).reduce((a,b)=>a+b,0)/period;const k=2/(period+1);for(let i=period;i<=end;i++)v=values[i]*k+v*(1-k);return v};
+ if(c.length<220)return 'unknown';
+ const last=c.length-1,close=c[last],e20=emaAt(c,20,last),e50=emaAt(c,50,last),e200=emaAt(c,200,last),e50prev=emaAt(c,50,last-5);
+ if(![close,e20,e50,e200,e50prev].every(Number.isFinite))return 'unknown';
+ if(close>e200&&e20>e50&&e50>e200&&e50>e50prev)return 'bull';
+ if(close<e200&&e20<e50&&e50<e200&&e50<e50prev)return 'bear';
+ return 'sideways';
+}
+function regimeAllows(strategy,a,regime){
+ if(strategy!=='alSat'&&strategy!=='birlesik')return true;
+ if(regime==='bull')return true;
+ if(regime==='bear'||regime==='unknown')return false;
+ return a.score>=a.threshold+0.75;
+}
 async function main(){
  const s=readState();
  const reset=process.env.RESET_STRATEGY;
@@ -59,6 +75,10 @@ async function main(){
   console.log('Universe',coins.length,'4h',due4,'1h',due1);
   for(const interval of ['4h','1h']){
    if((interval==='4h'&&!due4)||(interval==='1h'&&!due1))continue;
+   const btcRaw=await binance('klines?symbol=BTCUSDT&interval='+interval+'&limit=500');
+   const btcCandles=Array.isArray(btcRaw)?btcRaw.slice(0,-1).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})):[];
+   const btcMarketRegime=classifyBtcRegime(btcCandles);
+   console.log('BTC regime',interval,btcMarketRegime);
    let next=0,opened=0,closed=0,failed=0;
    // Her sanal portföy için eşzamanlı taramalarda çift satış/alımı önle.
    const rotationLocks=Object.fromEntries(STRATEGIES.map(k=>[k,false]));
@@ -94,7 +114,7 @@ async function main(){
        }
        if(!isNew||book.positions.some(p=>p.symbol===symbol&&p.timeframe===interval))continue;
        const analysis=analyze(candles,E);
-       if(!analysis||!allowed(strategy,analysis)||rotationLocks[strategy])continue;
+       if(!analysis||!allowed(strategy,analysis)||!regimeAllows(strategy,analysis,btcMarketRegime)||rotationLocks[strategy])continue;
        rotationLocks[strategy]=true;
        try{
         const ticker=await binance('ticker/price?symbol='+symbol+'USDT');
@@ -143,7 +163,7 @@ async function main(){
         id:strategy+'-'+interval+'-'+symbol+'-'+last.t,
         strategy,symbol,name:coin.name,timeframe:interval,qty,entry,lastPrice:entry,
         target:lv.target,stop:lv.stop,costTL,
-        pattern:analysis.pattern&&analysis.pattern.name||(strategy==='alSat'?'Al/Sat sinyali':'Yükseliş formasyonu'),
+        pattern:analysis.pattern&&analysis.pattern.name||(strategy==='alSat'?'Al/Sat sinyali':'Yükseliş formasyonu'),btcRegime:btcMarketRegime,
         openedAt:Date.now(),entryBar:last.t
        });
         opened++;
