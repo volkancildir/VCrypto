@@ -1241,24 +1241,64 @@ function buildSignalSeries(candles){
   }
   scores[i]=score;
  }
- return {scores,c,e20,e50,e200:longEma,rsi,macd,macdSignal,mid,adx,plusDI,minusDI,upper,lower,warmup,longPeriod}
+ return {scores,c,candles,e20,e50,e200:longEma,rsi,macd,macdSignal,mid,adx,plusDI,minusDI,upper,lower,warmup,longPeriod}
 }
-function simulateSignal(scores,closes,threshold,start,end){
- let trades=[],entry=null;
- for(let i=Math.max(start,1);i<Math.min(end,scores.length-1);i++){
-  const sc=scores[i];if(sc==null)continue;
-  if(entry===null&&sc>=threshold){entry={i:i+1,price:closes[i+1]};i++}
-  else if(entry!==null&&(sc<=0||i-entry.i>=12)){const ret=closes[i+1]/entry.price-1-.002;trades.push({ret});entry=null;i++}
+function simulateSignal(scores,candles,threshold,start,end){
+ const trades=[];let position=null;
+ const feeReturn=(exit,entry)=>exit/entry*(1-.001)/(1+.001)-1;
+ const atrAt=(i)=>{
+  const trs=[];
+  for(let j=Math.max(1,i-14);j<=i;j++){
+   const k=candles[j],pc=candles[j-1];
+   trs.push(Math.max(k.h-k.l,Math.abs(k.h-pc.c),Math.abs(k.l-pc.c)));
+  }
+  return trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:candles[i].c*.03;
+ };
+ const last=Math.min(end,candles.length);
+ for(let i=Math.max(start,1);i<last;i++){
+  const candle=candles[i],score=scores[i];
+  if(position){
+   const hitStop=candle.l<=position.stop,hitTarget=candle.h>=position.target;
+   if(hitStop&&hitTarget){
+    const exit=candle.o<position.stop?candle.o:position.stop;
+    trades.push({ret:feeReturn(exit,position.entry),reason:'stop and target same candle; stop assumed'});
+    position=null;continue;
+   }
+   if(hitStop){
+    const exit=candle.o<position.stop?candle.o:position.stop;
+    trades.push({ret:feeReturn(exit,position.entry),reason:'stop'});position=null;continue;
+   }
+   if(hitTarget){
+    const exit=candle.o>position.target?candle.o:position.target;
+    trades.push({ret:feeReturn(exit,position.entry),reason:'target'});position=null;continue;
+   }
+   if(score!=null&&score<=-threshold){
+    trades.push({ret:feeReturn(candle.c,position.entry),reason:'sell signal'});position=null;continue;
+   }
+  }else if(score!=null&&score>=threshold&&i+1<last){
+   const next=candles[i+1],entry=next.o,atr=atrAt(i);
+   if(!(entry>0&&atr>0))continue;
+   position={entry,stop:entry-1.5*atr,target:entry+2*atr};
+  }
  }
- if(entry!==null&&end-1>entry.i){trades.push({ret:closes[end-1]/entry.price-1-.002})}
+ if(position&&last>0){
+  const exit=candles[last-1].c;
+  trades.push({ret:feeReturn(exit,position.entry),reason:'test window end'});
+ }
  const net=trades.reduce((a,t)=>a+t.ret,0),wins=trades.filter(t=>t.ret>0).length;
- return {trades:trades.length,net,winRate:trades.length?wins/trades.length:0,avg:trades.length?net/trades.length:0}
+ return {trades:trades.length,net,winRate:trades.length?wins/trades.length:0,avg:trades.length?net/trades.length:0,profitFactor:(()=>{const gains=trades.filter(t=>t.ret>0).reduce((a,t)=>a+t.ret,0),losses=-trades.filter(t=>t.ret<0).reduce((a,t)=>a+t.ret,0);return losses?gains/losses:gains>0?Infinity:0})()};
 }
 function optimizeSignal(series){
  const n=series.c.length,split=Math.floor(n*.7),candidates=[1.5,2,2.5,3,3.5];let best=null;
- for(const threshold of candidates){const train=simulateSignal(series.scores,series.c,threshold,series.warmup||201,split);if(train.trades<3)continue;const metric=train.avg*Math.sqrt(train.trades);if(!best||metric>best.metric)best={threshold,metric,train}}
- const threshold=best?.threshold||2.5,test=simulateSignal(series.scores,series.c,threshold,Math.max(split,series.warmup||201),n);
- return {threshold,trainTrades:best?.train.trades||0,test,split}
+ for(const threshold of candidates){
+  const train=simulateSignal(series.scores,series.candles,threshold,series.warmup||201,split);
+  if(train.trades<3)continue;
+  const metric=train.avg*Math.sqrt(train.trades);
+  if(!best||metric>best.metric)best={threshold,metric,train};
+ }
+ const threshold=best?.threshold||2.5;
+ const test=simulateSignal(series.scores,series.candles,threshold,Math.max(split,series.warmup||201),n);
+ return {threshold,trainTrades:best?.train.trades||0,train:best?.train||null,test,split};
 }
 function linearSlope(values){
  const n=values.length;if(n<3)return 0;const xm=(n-1)/2,ym=values.reduce((a,b)=>a+b,0)/n;let num=0,den=0;
