@@ -21,7 +21,8 @@ function levels(strategy,a,entry){let stop=strategy!=='alSat'&&a.pattern?Number(
 async function main(){
  const s=readState();
  const reset=process.env.RESET_STRATEGY;
- if(STRATEGIES.includes(reset)){s.strategies[reset]=blankBook();console.log('Reset strategy:',reset)}
+ const resetApplied=STRATEGIES.includes(reset);
+ if(resetApplied){s.strategies[reset]=blankBook();console.log('Reset strategy:',reset,'to 10000 TL')}
  const E=await engine();
  const rate=await fxRate();
  s.fxRate=rate;
@@ -53,7 +54,7 @@ async function main(){
  const due4=closed4>Number(s.scanBars['4h']||0);
  const due1=closed1>Number(s.scanBars['1h']||0);
 
- if(due4||due1){
+ if((due4||due1)&&!resetApplied){
   const coins=await universe();
   console.log('Universe',coins.length,'4h',due4,'1h',due1);
   for(const interval of ['4h','1h']){
