@@ -13,7 +13,7 @@
           "timeframe": "4h",
           "qty": 0.02337086797394787,
           "entry": 1296.64,
-          "lastPrice": 1248.52,
+          "lastPrice": 1251.93,
           "target": 1410.9946666666667,
           "stop": 1211.119,
           "costTL": 1517.6817857602193,
@@ -71,13 +71,13 @@
         }
       ],
       "summary": {
-        "equityTL": 9752.999064145684,
-        "pnlTL": -247.00093585431568,
-        "returnPct": -2.470009358543157,
+        "equityTL": 9756.982401571579,
+        "pnlTL": -243.01759842842148,
+        "returnPct": -2.4301759842842108,
         "realizedTL": -187.75798967735318,
         "openPositions": 1,
         "cashTL": 8294.560224562427,
-        "exposureTL": 1458.438839583257
+        "exposureTL": 1462.4221770091524
       }
     },
     "formasyon": {
@@ -92,7 +92,7 @@
           "timeframe": "4h",
           "qty": 40.52110463322792,
           "entry": 0.2131,
-          "lastPrice": 0.1948,
+          "lastPrice": 0.191,
           "target": 0.32315,
           "stop": 0.16381307692307692,
           "costTL": 432.46522463292183,
@@ -300,13 +300,13 @@
         }
       ],
       "summary": {
-        "equityTL": 9481.216634475417,
-        "pnlTL": -518.7833655245831,
-        "returnPct": -5.187833655245832,
+        "equityTL": 9473.520321001226,
+        "pnlTL": -526.479678998774,
+        "returnPct": -5.264796789987736,
         "realizedTL": -480.85547372651513,
         "openPositions": 1,
         "cashTL": 9086.679301640563,
-        "exposureTL": 394.5373328348549
+        "exposureTL": 386.8410193606637
       }
     },
     "birlesik": {
@@ -982,13 +982,13 @@
     "1h": 1793905200000
   },
   "fxRate": 0.019987,
-  "updatedAt": "2026-11-05T20:11:13.936Z",
+  "updatedAt": "2026-11-05T20:56:57.632Z",
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
-    "equityTL": 29198.898305408697,
-    "pnlTL": -801.1016945913034,
-    "returnPct": -2.67033898197101,
+    "equityTL": 29195.1853293604,
+    "pnlTL": -804.8146706396001,
+    "returnPct": -2.682715568798666,
     "openPositions": 2
   }
 }
