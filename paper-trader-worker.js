@@ -23,7 +23,7 @@ function relativeStrength(candles,btcCandles){
  return {rs20:(now.c/past20.c)/(btcNow/btc20)-1,rs50:(now.c/past50.c)/(btcNow/btc50)-1};
 }
 function analyze(candles,E,btcCandles){const series=E.buildSignalSeries(candles),opt=E.optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)return null;const entry=series.c[i],pattern=E.detectChartPattern(candles),trs=[];for(let j=Math.max(1,candles.length-15);j<candles.length;j++){const k=candles[j],pc=series.c[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-pc),Math.abs(k.l-pc)))}const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:entry*.03,validated=opt.trainTrades>=3&&!!(opt.train&&opt.train.net>0)&&opt.test.trades>=3&&opt.test.net>0;const stop=entry-1.5*atr,target=entry+2*atr,rr=(target-entry)/Math.max(entry-stop,1e-9);const alSignal=score>=opt.threshold&&validated&&rr>=1.2?'AL':score<=-opt.threshold?'SAT':'NÖTR';const rs=relativeStrength(candles,btcCandles);const baselineVolumes=candles.slice(Math.max(0,i-25),i-5).map(x=>x.v).filter(x=>Number.isFinite(x)&&x>0);const recent=candles.slice(Math.max(0,i-4),i+1);const avgVolume=baselineVolumes.length===20?baselineVolumes.reduce((a,b)=>a+b,0)/20:null;const recentAvgVolume=recent.length===5?recent.reduce((a,x)=>a+(Number.isFinite(x.v)&&x.v>0?x.v:0),0)/5:null;const volumeRatio=avgVolume&&avgVolume>0&&recentAvgVolume!=null?recentAvgVolume/avgVolume:null;const bullishVolumeBars=recent.filter(x=>x.c>x.o).length;const volumeConfirmed=Number.isFinite(volumeRatio)&&volumeRatio>=1.2&&bullishVolumeBars>=3&&candles[i].c>candles[i-1].c;const last=candles[i],candleRange=Math.max(last.h-last.l,1e-12),bodyRatio=Math.abs(last.c-last.o)/candleRange,closeLocation=(last.c-last.l)/candleRange;const patternConfirmed=!!(pattern&&pattern.direction===1&&bodyRatio>=.4&&closeLocation>=.7&&last.c>candles[i-1].c&&pattern.qualityScore>=65);return {alSignal,pattern,patternConfirmed,validated,atr,atrTarget:target,atrStop:stop,score,threshold:opt.threshold,rs20:rs?rs.rs20:null,rs50:rs?rs.rs50:null,volumeRatio,volumeConfirmed}}
-function allowed(strategy,a){const bull=!!(a.pattern&&a.pattern.direction===1);if(strategy==='alSat')return a.alSignal==='AL';if(strategy==='formasyon')return bull;if(strategy==='birlesik')return a.alSignal==='AL'&&bull&&a.patternConfirmed===true;return false}
+function allowed(strategy,a){const bull=!!(a.pattern&&a.pattern.direction===1);if(strategy==='alSat')return a.alSignal==='AL';if(strategy==='formasyon')return bull&&a.patternConfirmed===true;if(strategy==='birlesik')return a.alSignal==='AL'&&bull&&a.patternConfirmed===true;return false}
 function shouldExit(strategy,a){if(strategy==='alSat')return a.alSignal==='SAT';if(strategy==='formasyon')return !!(a.pattern&&a.pattern.direction===-1);return a.alSignal==='SAT'||!!(a.pattern&&a.pattern.direction===-1)}
 function levels(strategy,a,entry){let stop=strategy!=='alSat'&&a.pattern?Number(a.pattern.stop):a.atrStop,target=strategy!=='alSat'&&a.pattern&&a.pattern.targets?Number(a.pattern.targets[0]):a.atrTarget;if(!(stop>0&&stop<entry))stop=entry-1.5*a.atr;if(!(target>entry))target=entry+2*a.atr;return {stop,target}}
 function classifyBtcRegime(candles){
@@ -37,7 +37,14 @@ function classifyBtcRegime(candles){
  return 'sideways';
 }
 function regimeAllows(strategy,a,regime){
- if(strategy!=='alSat'&&strategy!=='birlesik')return true;
+ if(strategy==='formasyon'){
+  if(regime==='bull')return true;
+  if(regime==='bear'||regime==='unknown')return false;
+  return a.patternConfirmed===true&&a.volumeConfirmed===true&&
+   Number.isFinite(a.pattern&&a.pattern.qualityScore)&&a.pattern.qualityScore>=75&&
+   Number.isFinite(a.rs20)&&Number.isFinite(a.rs50)&&a.rs20>0&&a.rs50>0;
+ }
+ if(strategy!=='alSat'&&strategy!=='birlesik')return false;
  if(!(Number.isFinite(a.rs20)&&Number.isFinite(a.rs50)&&a.rs20>0&&a.rs50>0))return false;
  if(a.volumeConfirmed!==true)return false;
  if(regime==='bull')return true;
