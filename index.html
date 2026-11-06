@@ -1360,7 +1360,7 @@ function detectChartPattern(candles){
  function pivots(arr,isHigh){
   const out=[];for(let i=2;i<arr.length-2;i++){const x=arr[i],w=arr.slice(i-2,i+3);if(isHigh?x===max(w):x===min(w))out.push({i:i+start,p:x})}return out
  }
- const ph=pivots(h,true),pl=pivots(l,false);
+ const ph=pivots(hh,true),pl=pivots(ll,false);
  const last3h=ph.slice(-3),last3l=pl.slice(-3);
  if(last3h.length>=2){
   const p1=last3h[last3h.length-2],p2=last3h[last3h.length-1],tol=Math.max(p1.p,p2.p)*.018;
