@@ -10,7 +10,7 @@ async function universe(){let rows=[];for(let page=1;page<=2;page++){const d=awa
 async function binance(path){for(const host of ['https://data-api.binance.vision/api/v3/','https://api.binance.com/api/v3/']){try{return await get(host+path)}catch(e){console.log('Binance fallback:',e.message)}}throw Error('Binance API unavailable')}
 async function fxRate(){const d=await get('https://open.er-api.com/v6/latest/TRY');const r=Number(d.rates&&d.rates.USD);if(!(r>0))throw Error('FX rate unavailable');return r}
 function blankBook(){return {initial:START,cash:START,positions:[],trades:[]}}
-function blank(){return {initial:30000,strategies:{alSat:blankBook(),formasyon:blankBook(),birlesik:blankBook()},lastBars:{},scanBars:{},fxRate:0,updatedAt:null,active:true,engine:'GitHub Actions · 5 dakika kontrol'}}
+function blank(){return {initial:30000,strategies:{alSat:blankBook(),formasyon:blankBook(),birlesik:blankBook()},lastBars:{},scanBars:{},formasyonBacktest:{},fxRate:0,updatedAt:null,active:true,engine:'GitHub Actions · 5 dakika kontrol'}}
 function readState(){try{const old=JSON.parse(fs.readFileSync(STATE_FILE,'utf8'));if(old.strategies)return {...blank(),...old,strategies:Object.fromEntries(STRATEGIES.map(k=>[k,{...blankBook(),...(old.strategies[k]||{})}]))}}catch(e){}return blank()}
 function equity(b,rate){return b.cash+b.positions.reduce((a,p)=>a+p.qty*p.lastPrice/rate*(1-FEE),0)}
 function closePos(b,p,price,reason,rate){const i=b.positions.findIndex(x=>x.id===p.id);if(i<0)return;const proceeds=p.qty*price/rate*(1-FEE),pnl=proceeds-p.costTL;b.cash+=proceeds;b.trades.push({strategy:p.strategy,symbol:p.symbol,timeframe:p.timeframe,entry:p.entry,exit:price,qty:p.qty,costTL:p.costTL,proceedsTL:proceeds,pnl,returnPct:p.costTL?pnl/p.costTL*100:0,reason,openedAt:p.openedAt,closedAt:Date.now()});b.positions.splice(i,1)}
@@ -51,6 +51,89 @@ function regimeAllows(strategy,a,regime){
  if(regime==='bear'||regime==='unknown')return false;
  return a.score>=a.threshold+0.75;
 }
+
+function formasyonBacktest(candles,btcCandles,E,symbol){
+ const n=candles.length,start=220;
+ if(n<=start+2||btcCandles.length<=start)return [];
+ const btcIndex=new Map(btcCandles.map((x,i)=>[x.t,i]));
+ const trades=[];let pos=null;
+ function finish(exit,exitIndex,reason){
+  const ret=(exit/pos.entry)*(1-FEE)/(1+FEE)-1;
+  const fold=Math.min(2,Math.max(0,Math.floor((exitIndex-start)/Math.max(1,n-start)*3)));
+  trades.push({symbol,entryTime:pos.entryTime,exitTime:candles[exitIndex].t,ret,reason,fold,quality:pos.quality});
+  pos=null;
+ }
+ for(let i=start;i<n;i++){
+  const candle=candles[i],prefix=candles.slice(0,i+1);
+  if(pos){
+   const hitStop=candle.l<=pos.stop,hitTarget=candle.h>=pos.target;
+   if(hitStop&&hitTarget){finish(candle.o<pos.stop?candle.o:pos.stop,i,'same-candle stop/target; stop assumed');continue}
+   if(hitStop){finish(candle.o<pos.stop?candle.o:pos.stop,i,'stop');continue}
+   if(hitTarget){finish(candle.o>pos.target?candle.o:pos.target,i,'target');continue}
+   const exitPattern=E.detectChartPattern(prefix);
+   if(exitPattern&&exitPattern.direction===-1){finish(candle.c,i,'bearish pattern');continue}
+   continue;
+  }
+  if(i+1>=n)continue;
+  const pattern=E.detectChartPattern(prefix);
+  if(!pattern||pattern.direction!==1||pattern.qualityScore<65)continue;
+  const range=Math.max(candle.h-candle.l,1e-12);
+  const bodyRatio=Math.abs(candle.c-candle.o)/range;
+  const closeLocation=(candle.c-candle.l)/range;
+  if(bodyRatio<.4||closeLocation<.7||candle.c<=candles[i-1].c)continue;
+  const baseline=prefix.slice(Math.max(0,i-25),i-5).map(x=>x.v).filter(x=>Number.isFinite(x)&&x>0);
+  const recent=prefix.slice(Math.max(0,i-4),i+1);
+  if(baseline.length!==20||recent.length!==5)continue;
+  const avgVolume=baseline.reduce((a,b)=>a+b,0)/20;
+  const recentAvg=recent.reduce((a,x)=>a+(Number.isFinite(x.v)&&x.v>0?x.v:0),0)/5;
+  const volumeConfirmed=avgVolume>0&&recentAvg/avgVolume>=1.2&&recent.filter(x=>x.c>x.o).length>=3&&candle.c>candles[i-1].c;
+  const bi=btcIndex.get(candle.t);
+  if(bi==null)continue;
+  const btcPrefix=btcCandles.slice(0,bi+1);
+  const regime=classifyBtcRegime(btcPrefix);
+  const rs=relativeStrength(prefix,btcPrefix);
+  const bullAllowed=regime==='bull';
+  const sidewaysAllowed=regime==='sideways'&&volumeConfirmed&&pattern.qualityScore>=75&&!!rs&&rs.rs20>0&&rs.rs50>0;
+  if(!bullAllowed&&!sidewaysAllowed)continue;
+  const entry=candles[i+1].o;
+  if(!(entry>0))continue;
+  const trs=[];
+  for(let j=Math.max(1,i-14);j<=i;j++){
+   const k=candles[j],pc=candles[j-1];
+   trs.push(Math.max(k.h-k.l,Math.abs(k.h-pc.c),Math.abs(k.l-pc.c)));
+  }
+  const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:candle.c*.03;
+  const lv=levels('formasyon',{pattern,atr,atrStop:candle.c-1.5*atr,atrTarget:candle.c+2*atr},entry);
+  if(!(lv.stop>0&&lv.stop<entry&&lv.target>entry))continue;
+  pos={entry,stop:lv.stop,target:lv.target,entryTime:candles[i+1].t,quality:pattern.qualityScore};
+ }
+ if(pos)finish(candles[n-1].c,n-1,'end of sample');
+ return trades;
+}
+function formasyonBacktestMetrics(trades){
+ const wins=trades.filter(t=>t.ret>0),losses=trades.filter(t=>t.ret<0);
+ const grossWin=wins.reduce((a,t)=>a+t.ret,0),grossLoss=-losses.reduce((a,t)=>a+t.ret,0);
+ return {
+  trades:trades.length,
+  winRatePct:trades.length?wins.length/trades.length*100:0,
+  avgReturnPct:trades.length?trades.reduce((a,t)=>a+t.ret,0)/trades.length*100:0,
+  avgWinPct:wins.length?grossWin/wins.length*100:0,
+  avgLossPct:losses.length?grossLoss/losses.length*100:0,
+  profitFactor:grossLoss>0?grossWin/grossLoss:null,
+  grossProfitPct:grossWin*100,
+  grossLossPct:grossLoss*100
+ };
+}
+function summarizeFormasyonWalkForward(trades,interval,coinsTested,bars){
+ return {
+  interval,coinsTested,bars,method:'Fixed-rule chronological 3-fold test; next-candle-open entries; 0.1% fee each side; no slippage or portfolio allocation constraints',
+  overall:formasyonBacktestMetrics(trades),
+  folds:[0,1,2].map(fold=>({fold:fold+1,...formasyonBacktestMetrics(trades.filter(t=>t.fold===fold))})),
+  sampleWarning:trades.length<30?'Fewer than 30 closed trades: results are preliminary and statistically weak.':null,
+  survivorshipWarning:'Universe is the current top 100 by market cap, not historical point-in-time membership.'
+ };
+}
+
 async function main(){
  const s=readState();
  const reset=process.env.RESET_STRATEGY;
@@ -96,7 +179,7 @@ async function main(){
    const btcCandles=Array.isArray(btcRaw)?btcRaw.slice(0,-1).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})):[];
    const btcMarketRegime=classifyBtcRegime(btcCandles);
    console.log('BTC regime',interval,btcMarketRegime);
-   let next=0,opened=0,closed=0,failed=0;
+   let next=0,opened=0,closed=0,failed=0;const backtestTrades=[];let backtestCoins=0,backtestBars=0;
    // Her sanal portföy için eşzamanlı taramalarda çift satış/alımı önle.
    const rotationLocks=Object.fromEntries(STRATEGIES.map(k=>[k,false]));
    async function worker(){
@@ -109,6 +192,11 @@ async function main(){
       if(!Array.isArray(raw)||raw.length<110){failed++;continue}
       const candles=raw.slice(0,-1).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
       const last=candles[candles.length-1];
+      if((coin.rank||999)<=100&&candles.length>=240){
+       backtestTrades.push(...formasyonBacktest(candles,btcCandles,E,symbol));
+       backtestCoins++;
+       backtestBars=Math.max(backtestBars,candles.length);
+      }
       const isNew=last.t>Number(s.lastBars[key]||0);
       for(const strategy of STRATEGIES){
        const book=s.strategies[strategy];
@@ -196,6 +284,8 @@ async function main(){
     }
    }
    await Promise.all(Array.from({length:6},worker));
+   s.formasyonBacktest=s.formasyonBacktest||{};
+   s.formasyonBacktest[interval]={...summarizeFormasyonWalkForward(backtestTrades,interval,backtestCoins,backtestBars),updatedAt:new Date().toISOString()};
    s.scanBars[interval]=interval==='4h'?closed4:closed1;
    console.log(interval,{opened,closed,failed});
   }
