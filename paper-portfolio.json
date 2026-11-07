@@ -13,7 +13,7 @@
           "timeframe": "4h",
           "qty": 0.02337086797394787,
           "entry": 1296.64,
-          "lastPrice": 1266.56,
+          "lastPrice": 1243.7,
           "target": 1410.9946666666667,
           "stop": 1211.119,
           "costTL": 1517.6817857602193,
@@ -71,13 +71,13 @@
         }
       ],
       "summary": {
-        "equityTL": 9778.378074657381,
-        "pnlTL": -221.62192534261885,
-        "returnPct": -2.216219253426188,
+        "equityTL": 9751.596811982758,
+        "pnlTL": -248.40318801724243,
+        "returnPct": -2.4840318801724215,
         "realizedTL": -187.75798967735318,
         "openPositions": 1,
         "cashTL": 8294.560224562427,
-        "exposureTL": 1483.8178500949537
+        "exposureTL": 1457.0365874203305
       }
     },
     "formasyon": {
@@ -882,13 +882,13 @@
     }
   },
   "fxRate": 0.019929,
-  "updatedAt": "2026-11-07T20:17:59.161Z",
+  "updatedAt": "2026-11-07T20:56:29.768Z",
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
-    "equityTL": 29743.06068144498,
-    "pnlTL": -256.9393185550234,
-    "returnPct": -0.8564643951834094,
+    "equityTL": 29716.279418770355,
+    "pnlTL": -283.720581229647,
+    "returnPct": -0.9457352707654798,
     "openPositions": 1
   }
 }
