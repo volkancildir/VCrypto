@@ -49,7 +49,7 @@ async function main(){
  const requested=process.env.SCAN_TIMEFRAME;
  let key=requested&&TFS[requested]?requested:null;
  if(!key){
-  const missing=keys.find(k=>!output.timeframes[k]);
+  const missing=['4h','1h','1d','1w','1M','1y'].find(k=>!output.timeframes[k]);
   if(missing)key=missing;
   else key=keys.slice().sort((a,b)=>Date.parse(output.timeframes[a].updatedAt||0)-Date.parse(output.timeframes[b].updatedAt||0))[0];
  }
