@@ -3,77 +3,16 @@
   "strategies": {
     "alSat": {
       "initial": 10000,
-      "cash": 9713.284691347337,
+      "cash": 10000,
       "positions": [],
-      "trades": [
-        {
-          "strategy": "alSat",
-          "symbol": "AWE",
-          "timeframe": "1h",
-          "entry": 0.06836,
-          "exit": 0.067113,
-          "qty": 582.1810042434505,
-          "costTL": 1993.1801342638892,
-          "proceedsTL": 1952.9114836670287,
-          "pnl": -40.268650596860425,
-          "returnPct": -2.0203216911818274,
-          "reason": "Zarar-kes",
-          "openedAt": 1793875232402,
-          "closedAt": 1793886450686
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "BANANAS31",
-          "timeframe": "1h",
-          "entry": 0.005944,
-          "exit": 0.005824299999999999,
-          "qty": 6726.695868727332,
-          "costTL": 2002.4747948145778,
-          "proceedsTL": 1958.22867131037,
-          "pnl": -44.246123504207844,
-          "returnPct": -2.2095720564764902,
-          "reason": "Zarar-kes (canlı fiyat kontrolü)",
-          "openedAt": 1793852751646,
-          "closedAt": 1793889725617
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "STX",
-          "timeframe": "4h",
-          "entry": 0.3604,
-          "exit": 0.33904,
-          "qty": 93.54372321886734,
-          "costTL": 1688.441036970424,
-          "proceedsTL": 1585.197821394139,
-          "pnl": -103.24321557628491,
-          "returnPct": -6.1147066030528725,
-          "reason": "Zarar-kes (canlı fiyat kontrolü)",
-          "openedAt": 1793838407697,
-          "closedAt": 1793893088445
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "ZEC",
-          "timeframe": "4h",
-          "entry": 1296.64,
-          "exit": 1211.119,
-          "qty": 0.02337086797394787,
-          "costTL": 1517.6817857602193,
-          "proceedsTL": 1418.7244667849093,
-          "pnl": -98.95731897531005,
-          "returnPct": -6.520294300411697,
-          "reason": "Zarar-kes (canlı fiyat kontrolü)",
-          "openedAt": 1793838405814,
-          "closedAt": 1794175040327
-        }
-      ],
+      "trades": [],
       "summary": {
-        "equityTL": 9713.284691347337,
-        "pnlTL": -286.7153086526632,
-        "returnPct": -2.8671530865266304,
-        "realizedTL": -286.7153086526632,
+        "equityTL": 10000,
+        "pnlTL": 0,
+        "returnPct": 0,
+        "realizedTL": 0,
         "openPositions": 0,
-        "cashTL": 9713.284691347337,
+        "cashTL": 10000,
         "exposureTL": 0
       }
     },
@@ -94,32 +33,16 @@
     },
     "birlesik": {
       "initial": 10000,
-      "cash": 9964.682606787595,
+      "cash": 10000,
       "positions": [],
-      "trades": [
-        {
-          "strategy": "birlesik",
-          "symbol": "AWE",
-          "timeframe": "1h",
-          "entry": 0.06836,
-          "exit": 0.0672885,
-          "qty": 584.7571679344646,
-          "costTL": 2001.9999999999998,
-          "proceedsTL": 1966.682606787595,
-          "pnl": -35.317393212404795,
-          "returnPct": -1.764105555065175,
-          "reason": "Zarar-kes",
-          "openedAt": 1793875232658,
-          "closedAt": 1793886450688
-        }
-      ],
+      "trades": [],
       "summary": {
-        "equityTL": 9964.682606787595,
-        "pnlTL": -35.31739321240457,
-        "returnPct": -0.35317393212404014,
-        "realizedTL": -35.317393212404795,
+        "equityTL": 10000,
+        "pnlTL": 0,
+        "returnPct": 0,
+        "realizedTL": 0,
         "openPositions": 0,
-        "cashTL": 9964.682606787595,
+        "cashTL": 10000,
         "exposureTL": 0
       }
     }
@@ -885,9 +808,10 @@
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
-    "equityTL": 29677.967298134932,
-    "pnlTL": -322.0327018650678,
-    "returnPct": -1.0734423395502235,
+    "equityTL": 30000,
+    "pnlTL": 0,
+    "returnPct": 0,
     "openPositions": 0
-  }
+  },
+  "resetAt": "2026-11-10T16:21:24.807Z"
 }
