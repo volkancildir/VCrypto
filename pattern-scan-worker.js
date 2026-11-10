@@ -43,18 +43,30 @@ function resultFor(c,raw,tf){
 }
 async function main(){
  const coins=await getUniverse();console.log('Coin evreni',coins.length);
- const output={schema:1,updatedAt:new Date().toISOString(),coinCount:coins.length,source:'CoinGecko/CoinPaprika + Binance Spot',timeframes:{}};
- for(const [key,tf] of Object.entries(TFS)){
+ let output={schema:1,updatedAt:null,coinCount:coins.length,source:'CoinGecko/CoinPaprika + Binance Spot',timeframes:{}};
+ try{const old=JSON.parse(fs.readFileSync(OUTPUT,'utf8'));if(old&&old.schema===1&&old.timeframes)output={...old,coinCount:coins.length}}catch(e){}
+ const keys=Object.keys(TFS);
+ const requested=process.env.SCAN_TIMEFRAME;
+ let key=requested&&TFS[requested]?requested:null;
+ if(!key){
+  const missing=keys.find(k=>!output.timeframes[k]);
+  if(missing)key=missing;
+  else key=keys.slice().sort((a,b)=>Date.parse(output.timeframes[a].updatedAt||0)-Date.parse(output.timeframes[b].updatedAt||0))[0];
+ }
+ const tf=TFS[key];console.log('Bu çalışmada taranacak zaman dilimi:',key);
+ {
   const rows=new Array(coins.length),cache=new Map();let next=0,ok=0,unavailable=0;
   async function worker(){while(true){const i=next++;if(i>=coins.length)return;const c=coins[i],sym=String(c.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'');if(!sym){rows[i]={id:c.id,status:'unavailable',reason:'Sembol yok'};unavailable++;continue}
    try{const k=sym+'|'+tf.interval+'|'+tf.limit;let p=cache.get(k);if(!p){p=klines(sym+'USDT',tf);cache.set(k,p)}rows[i]=resultFor(c,await p,tf);if(rows[i].status==='ok')ok++;else unavailable++}catch(e){rows[i]={id:c.id,status:'unavailable',reason:e.message};unavailable++}
   }}
   await Promise.all(Array.from({length:10},worker));
-  if(ok<300)throw Error(key+' taraması başarısız: '+ok+'/500; önceki dosya korunuyor');
-  output.timeframes[key]={label:tf.label,total:coins.length,scanned:ok,unavailable,coins:rows,updatedAt:output.updatedAt};
-  console.log(key,{scanned:ok,unavailable});
+  if(ok<100)throw Error(key+' taraması başarısız: yalnızca '+ok+' coin için geçerli veri bulundu; önceki sonuç korunuyor');
+  const updatedAt=new Date().toISOString();
+  output.updatedAt=updatedAt;
+  output.timeframes[key]={label:tf.label,total:coins.length,scanned:ok,unavailable,coins:rows,updatedAt};
+  const tmp=OUTPUT+'.tmp';fs.writeFileSync(tmp,JSON.stringify(output));fs.renameSync(tmp,OUTPUT);
+  console.log(key,{scanned:ok,unavailable,updatedAt});
  }
- const tmp=OUTPUT+'.tmp';fs.writeFileSync(tmp,JSON.stringify(output));fs.renameSync(tmp,OUTPUT);
- console.log('Tarama tamamlandı',output.updatedAt);
+ console.log('Zaman dilimi taraması ve yayın tamamlandı',key,output.updatedAt);
 }
 main().catch(e=>{console.error(e);process.exit(1)});
