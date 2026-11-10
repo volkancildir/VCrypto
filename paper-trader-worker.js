@@ -68,7 +68,7 @@ function historicalOdds(candles,btcCandles,E,strategy,analysis,entry,lv,regime){
   const tr=[];for(let j=Math.max(1,i-13);j<=i;j++){const k=candles[j],p=candles[j-1];tr.push(Math.max(k.h-k.l,Math.abs(k.h-p.c),Math.abs(k.l-p.c)))}
   const atr=tr.reduce((a,b)=>a+b,0)/Math.max(1,tr.length),open=candles[i+1].o;if(!(atr>0&&open>0))continue;
   const t1=open+r1*atr,t2=open+r2*atr,adverse=open-1.5*atr;let hit1=false,hit2=false,adverseFirst=false;
-  for(let j=i+1;j<=Math.min(candles.length-1,i+OUTCOME_HORIZON);j++){const k=candles[j];if(!hit1&&k.l<=adverse)adverseFirst=true;if(k.h>=t2)hit2=true;if(k.h>=t1){hit1=true;break}}
+  for(let j=i+1;j<=Math.min(candles.length-1,i+OUTCOME_HORIZON);j++){const k=candles[j];if(!hit1&&k.l<=adverse)adverseFirst=true;if(k.h>=t2)hit2=true;if(k.h>=t1)hit1=true}
   const end=candles[Math.min(candles.length-1,i+OUTCOME_HORIZON)].c,netPct=hit1?((t1/open)*(1-FEE)/(1+FEE)-1)*100:((end/open)*(1-FEE)/(1+FEE)-1)*100;
   samples.push({hit1,hit2,adverseFirst,netPct});
  }
