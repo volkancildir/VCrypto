@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),https=require('https'),vm=require('vm');
-const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,RISK=.01,MAX_ALLOC=.20,MAX_PORTFOLIO_RISK=.05;
+const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MIN_MATCHES=30,ENTRY_T1_PROB=60,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
 const STRATEGIES=['alSat','formasyon','birlesik'];
 const EXCLUDED=new Set(['USDT','USDC','BUSD','FDUSD','TUSD','DAI','USDE','USDS','USD1','PYUSD','EURC','USTC','USDD','FRAX','USDP','USDX','WBTC','STETH','WSTETH']);
 function get(url,timeout=15000){return new Promise((resolve,reject)=>{const req=https.get(url,{headers:{'user-agent':'VCrypto-paper-simulation/2.0','accept':'application/json'}},res=>{let b='';res.setEncoding('utf8');res.on('data',x=>b+=x);res.on('end',()=>{if(res.statusCode<200||res.statusCode>=300)return reject(Error('HTTP '+res.statusCode+' '+url));try{resolve(JSON.parse(b))}catch(e){reject(e)}})});req.setTimeout(timeout,()=>req.destroy(Error('timeout')));req.on('error',reject)})}
@@ -22,10 +22,10 @@ function relativeStrength(candles,btcCandles){
  if(![now.c,past20.c,past50.c,btcNow,btc20,btc50].every(x=>Number.isFinite(x)&&x>0))return null;
  return {rs20:(now.c/past20.c)/(btcNow/btc20)-1,rs50:(now.c/past50.c)/(btcNow/btc50)-1};
 }
-function analyze(candles,E,btcCandles){const series=E.buildSignalSeries(candles),opt=E.optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)return null;const entry=series.c[i],pattern=E.detectChartPattern(candles),trs=[];for(let j=Math.max(1,candles.length-15);j<candles.length;j++){const k=candles[j],pc=series.c[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-pc),Math.abs(k.l-pc)))}const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:entry*.03,validated=opt.trainTrades>=3&&!!(opt.train&&opt.train.net>0)&&opt.test.trades>=3&&opt.test.net>0;const stop=entry-1.5*atr,target=entry+2*atr,rr=(target-entry)/Math.max(entry-stop,1e-9);const alSignal=score>=opt.threshold&&validated&&rr>=1.2?'AL':score<=-opt.threshold?'SAT':'NÖTR';const rs=relativeStrength(candles,btcCandles);const baselineVolumes=candles.slice(Math.max(0,i-25),i-5).map(x=>x.v).filter(x=>Number.isFinite(x)&&x>0);const recent=candles.slice(Math.max(0,i-4),i+1);const avgVolume=baselineVolumes.length===20?baselineVolumes.reduce((a,b)=>a+b,0)/20:null;const recentAvgVolume=recent.length===5?recent.reduce((a,x)=>a+(Number.isFinite(x.v)&&x.v>0?x.v:0),0)/5:null;const volumeRatio=avgVolume&&avgVolume>0&&recentAvgVolume!=null?recentAvgVolume/avgVolume:null;const bullishVolumeBars=recent.filter(x=>x.c>x.o).length;const volumeConfirmed=Number.isFinite(volumeRatio)&&volumeRatio>=1.2&&bullishVolumeBars>=3&&candles[i].c>candles[i-1].c;const last=candles[i],candleRange=Math.max(last.h-last.l,1e-12),bodyRatio=Math.abs(last.c-last.o)/candleRange,closeLocation=(last.c-last.l)/candleRange;const patternConfirmed=!!(pattern&&pattern.direction===1&&bodyRatio>=.4&&closeLocation>=.7&&last.c>candles[i-1].c&&pattern.qualityScore>=65);return {alSignal,pattern,patternConfirmed,validated,atr,atrTarget:target,atrStop:stop,score,threshold:opt.threshold,rs20:rs?rs.rs20:null,rs50:rs?rs.rs50:null,volumeRatio,volumeConfirmed}}
+function analyze(candles,E,btcCandles){const series=E.buildSignalSeries(candles),opt=E.optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)return null;const entry=series.c[i],pattern=E.detectChartPattern(candles),trs=[];for(let j=Math.max(1,candles.length-15);j<candles.length;j++){const k=candles[j],pc=series.c[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-pc),Math.abs(k.l-pc)))}const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:entry*.03,validated=opt.trainTrades>=3&&!!(opt.train&&opt.train.net>0)&&opt.test.trades>=3&&opt.test.net>0;const target=entry+2*atr;const alSignal=score>=opt.threshold&&validated&&target>entry?'AL':score<=-opt.threshold?'SAT':'NÖTR';const rs=relativeStrength(candles,btcCandles);const baselineVolumes=candles.slice(Math.max(0,i-25),i-5).map(x=>x.v).filter(x=>Number.isFinite(x)&&x>0);const recent=candles.slice(Math.max(0,i-4),i+1);const avgVolume=baselineVolumes.length===20?baselineVolumes.reduce((a,b)=>a+b,0)/20:null;const recentAvgVolume=recent.length===5?recent.reduce((a,x)=>a+(Number.isFinite(x.v)&&x.v>0?x.v:0),0)/5:null;const volumeRatio=avgVolume&&avgVolume>0&&recentAvgVolume!=null?recentAvgVolume/avgVolume:null;const bullishVolumeBars=recent.filter(x=>x.c>x.o).length;const volumeConfirmed=Number.isFinite(volumeRatio)&&volumeRatio>=1.2&&bullishVolumeBars>=3&&candles[i].c>candles[i-1].c;const last=candles[i],candleRange=Math.max(last.h-last.l,1e-12),bodyRatio=Math.abs(last.c-last.o)/candleRange,closeLocation=(last.c-last.l)/candleRange;const patternConfirmed=!!(pattern&&pattern.direction===1&&bodyRatio>=.4&&closeLocation>=.7&&last.c>candles[i-1].c&&pattern.qualityScore>=65);return {alSignal,pattern,patternConfirmed,validated,atr,atrTarget:target,score,threshold:opt.threshold,rs20:rs?rs.rs20:null,rs50:rs?rs.rs50:null,volumeRatio,volumeConfirmed}}
 function allowed(strategy,a){const bull=!!(a.pattern&&a.pattern.direction===1);if(strategy==='alSat')return a.alSignal==='AL';if(strategy==='formasyon')return bull&&a.patternConfirmed===true;if(strategy==='birlesik')return a.alSignal==='AL'&&bull&&a.patternConfirmed===true;return false}
 function shouldExit(strategy,a){if(strategy==='alSat')return a.alSignal==='SAT';if(strategy==='formasyon')return !!(a.pattern&&a.pattern.direction===-1);return a.alSignal==='SAT'||!!(a.pattern&&a.pattern.direction===-1)}
-function levels(strategy,a,entry){let stop=strategy!=='alSat'&&a.pattern?Number(a.pattern.stop):a.atrStop,target=strategy!=='alSat'&&a.pattern&&a.pattern.targets?Number(a.pattern.targets[0]):a.atrTarget;if(!(stop>0&&stop<entry))stop=entry-1.5*a.atr;if(!(target>entry))target=entry+2*a.atr;return {stop,target}}
+function levels(strategy,a,entry){let target1=strategy!=='alSat'&&a.pattern&&a.pattern.targets?Number(a.pattern.targets[0]):a.atrTarget;if(!(target1>entry))target1=entry+2*a.atr;let target2=strategy!=='alSat'&&a.pattern&&a.pattern.targets&&Number(a.pattern.targets[1])>target1?Number(a.pattern.targets[1]):entry+3*a.atr;if(!(target2>target1))target2=target1+Math.max(a.atr,entry*.01);return {target1,target2}}
 function classifyBtcRegime(candles){
  const c=candles.map(x=>x.c);
  const emaAt=(values,period,end)=>{if(end+1<period)return null;let v=values.slice(0,period).reduce((a,b)=>a+b,0)/period;const k=2/(period+1);for(let i=period;i<=end;i++)v=values[i]*k+v*(1-k);return v};
@@ -52,6 +52,33 @@ function regimeAllows(strategy,a,regime){
  return a.score>=a.threshold+0.75;
 }
 
+function historicalOdds(candles,btcCandles,E,strategy,analysis,entry,lv,regime){
+ const empty={samples:0,target1ProbabilityPct:null,target2ProbabilityPct:null,adverseProbabilityPct:null,expectedNetPct:null};
+ if(!Array.isArray(candles)||candles.length<260||!(analysis.atr>0&&entry>0&&lv.target1>entry))return empty;
+ const btcIndex=new Map(btcCandles.map((x,i)=>[x.t,i])),r1=(lv.target1-entry)/analysis.atr,r2=(lv.target2-entry)/analysis.atr;
+ if(!(r1>0&&r2>=r1))return empty;
+ const samples=[],last=candles.length-OUTCOME_HORIZON-2;
+ for(let i=220;i<=last;i+=2){
+  const bi=btcIndex.get(candles[i].t);if(bi==null||bi<220)continue;
+  const historicalRegime=classifyBtcRegime(btcCandles.slice(0,bi+1));
+  if(regime!=='unknown'&&historicalRegime!==regime)continue;
+  const prefix=candles.slice(0,i+1),pattern=E.detectChartPattern(prefix);
+  if(analysis.pattern){if(!pattern||pattern.name!==analysis.pattern.name||pattern.direction!==1)continue;if(Math.abs(Number(pattern.qualityScore||0)-Number(analysis.pattern.qualityScore||0))>15)continue}
+  else if(pattern&&pattern.direction<0)continue;
+  const tr=[];for(let j=Math.max(1,i-13);j<=i;j++){const k=candles[j],p=candles[j-1];tr.push(Math.max(k.h-k.l,Math.abs(k.h-p.c),Math.abs(k.l-p.c)))}
+  const atr=tr.reduce((a,b)=>a+b,0)/Math.max(1,tr.length),open=candles[i+1].o;if(!(atr>0&&open>0))continue;
+  const t1=open+r1*atr,t2=open+r2*atr,adverse=open-1.5*atr;let hit1=false,hit2=false,adverseFirst=false;
+  for(let j=i+1;j<=Math.min(candles.length-1,i+OUTCOME_HORIZON);j++){const k=candles[j];if(!hit1&&k.l<=adverse)adverseFirst=true;if(k.h>=t2)hit2=true;if(k.h>=t1){hit1=true;break}}
+  const end=candles[Math.min(candles.length-1,i+OUTCOME_HORIZON)].c,netPct=hit1?((t1/open)*(1-FEE)/(1+FEE)-1)*100:((end/open)*(1-FEE)/(1+FEE)-1)*100;
+  samples.push({hit1,hit2,adverseFirst,netPct});
+ }
+ if(!samples.length)return empty;
+ const n=samples.length;
+ return {samples:n,target1ProbabilityPct:samples.filter(x=>x.hit1).length/n*100,target2ProbabilityPct:samples.filter(x=>x.hit2).length/n*100,adverseProbabilityPct:samples.filter(x=>x.adverseFirst).length/n*100,expectedNetPct:samples.reduce((a,x)=>a+x.netPct,0)/n};
+}
+function entryAllowedByOdds(o){return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct>=ENTRY_T1_PROB&&o.expectedNetPct>0}
+function exitAllowedByOdds(o){return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct<EXIT_T1_PROB&&o.adverseProbabilityPct>=EXIT_ADVERSE_PROB}
+
 function formasyonBacktest(candles,btcCandles,E,symbol){
  const n=candles.length,start=220;
  if(n<=start+2||btcCandles.length<=start)return [];
@@ -66,10 +93,7 @@ function formasyonBacktest(candles,btcCandles,E,symbol){
  for(let i=start;i<n;i++){
   const candle=candles[i],prefix=candles.slice(0,i+1);
   if(pos){
-   const hitStop=candle.l<=pos.stop,hitTarget=candle.h>=pos.target;
-   if(hitStop&&hitTarget){finish(candle.o<pos.stop?candle.o:pos.stop,i,'same-candle stop/target; stop assumed');continue}
-   if(hitStop){finish(candle.o<pos.stop?candle.o:pos.stop,i,'stop');continue}
-   if(hitTarget){finish(candle.o>pos.target?candle.o:pos.target,i,'target');continue}
+   if(candle.h>=pos.target1){finish(candle.o>pos.target1?candle.o:pos.target1,i,'Target 1');continue}
    const exitPattern=E.detectChartPattern(prefix);
    if(exitPattern&&exitPattern.direction===-1){finish(candle.c,i,'bearish pattern');continue}
    continue;
@@ -103,9 +127,9 @@ function formasyonBacktest(candles,btcCandles,E,symbol){
    trs.push(Math.max(k.h-k.l,Math.abs(k.h-pc.c),Math.abs(k.l-pc.c)));
   }
   const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:candle.c*.03;
-  const lv=levels('formasyon',{pattern,atr,atrStop:candle.c-1.5*atr,atrTarget:candle.c+2*atr},entry);
-  if(!(lv.stop>0&&lv.stop<entry&&lv.target>entry))continue;
-  pos={entry,stop:lv.stop,target:lv.target,entryTime:candles[i+1].t,quality:pattern.qualityScore};
+  const lv=levels('formasyon',{pattern,atr,atrTarget:candle.c+2*atr},entry);
+  if(!(lv.target1>entry&&lv.target2>lv.target1))continue;
+  pos={entry,target1:lv.target1,target2:lv.target2,entryTime:candles[i+1].t,quality:pattern.qualityScore};
  }
  if(pos)finish(candles[n-1].c,n-1,'end of sample');
  return trades;
@@ -126,7 +150,7 @@ function formasyonBacktestMetrics(trades){
 }
 function summarizeFormasyonWalkForward(trades,interval,coinsTested,bars){
  return {
-  interval,coinsTested,bars,method:'Fixed-rule chronological 3-fold test; next-candle-open entries; 0.1% fee each side; no slippage or portfolio allocation constraints',
+  interval,coinsTested,bars,method:'Chronological 3-fold exit test; next-candle-open entries; Target 1 or confirmed bearish pattern exits; no stop-loss; 0.1% fee each side; live entries additionally require 30+ historical analogs and probability thresholds',
   overall:formasyonBacktestMetrics(trades),
   folds:[0,1,2].map(fold=>({fold:fold+1,...formasyonBacktestMetrics(trades.filter(t=>t.fold===fold))})),
   sampleWarning:trades.length<30?'Fewer than 30 closed trades: results are preliminary and statistically weak.':null,
@@ -143,7 +167,7 @@ async function main(){
  const rate=await fxRate();
  s.fxRate=rate;
 
- // Live target/stop checks are independent for each virtual account.
+ // Live Target 1 checks are independent for each virtual account; stop-loss is disabled.
  const tickers=await binance('ticker/price');
  const livePrices=new Map(tickers.filter(t=>t.symbol.endsWith('USDT')).map(t=>[t.symbol.slice(0,-4),Number(t.price)]));
  for(const strategy of STRATEGIES){
@@ -157,8 +181,10 @@ async function main(){
     closePos(book,pos,live,'Zaman dilimi değişimi: 1 günlük testten 1 saatliğe geçiş',rate);
     continue;
    }
-   if(live<=pos.stop)closePos(book,pos,pos.stop,'Zarar-kes (canlı fiyat kontrolü)',rate);
-   else if(live>=pos.target)closePos(book,pos,pos.target,'Hedef (canlı fiyat kontrolü)',rate);
+   if(!pos.target1)pos.target1=Number(pos.target)||Number(live);
+   if(!pos.target2)pos.target2=pos.target1;
+   delete pos.stop;
+   if(live>=pos.target1)closePos(book,pos,pos.target1,'Hedef 1 gerçekleşti (canlı fiyat kontrolü)',rate);
   }
  }
 
@@ -204,51 +230,35 @@ async function main(){
        if(pos){
         pos.lastPrice=last.c;
         if(!isNew)continue;
-        const hitTarget=last.h>=pos.target;
-        const hitStop=last.l<=pos.stop;
-        if(hitTarget&&hitStop){closePos(book,pos,pos.stop,'Aynı mumda hedef ve stop: stop varsayıldı',rate);closed++;continue}
-        if(hitStop){closePos(book,pos,pos.stop,'Zarar-kes',rate);closed++;continue}
-        if(hitTarget){closePos(book,pos,pos.target,'Hedef gerçekleşti',rate);closed++;continue}
+        if(last.h>=Number(pos.target1||pos.target)){closePos(book,pos,Number(pos.target1||pos.target),'Hedef 1 gerçekleşti',rate);closed++;continue}
         const analysis=analyze(candles,E,btcCandles);
         if(analysis&&shouldExit(strategy,analysis)){
-         const reason=strategy==='alSat'?'SAT sinyali':strategy==='formasyon'?'Aşağı yönlü formasyon':'SAT veya aşağı yönlü formasyon';
-         closePos(book,pos,last.c,reason,rate);
-         closed++;
+         const odds=historicalOdds(candles,btcCandles,E,strategy,analysis,last.c,{target1:Number(pos.target1||pos.target),target2:Number(pos.target2||pos.target1||pos.target)},btcMarketRegime);
+         pos.lastOdds=odds;
+         if(exitAllowedByOdds(odds)){const reason=strategy==='alSat'?'SAT sinyali + olasılık teyitli düşüş riski':strategy==='formasyon'?'Aşağı yönlü formasyon + olasılık teyitli düşüş riski':'Ters sinyal + olasılık teyitli düşüş riski';closePos(book,pos,last.c,reason,rate);closed++}
         }
         continue;
        }
        if(!isNew||book.positions.some(p=>p.symbol===symbol&&p.timeframe===interval))continue;
        const analysis=analyze(candles,E,btcCandles);
        if(!analysis||!allowed(strategy,analysis)||!regimeAllows(strategy,analysis,btcMarketRegime)||rotationLocks[strategy])continue;
+       const oddsLevels=levels(strategy,analysis,last.c),odds=historicalOdds(candles,btcCandles,E,strategy,analysis,last.c,oddsLevels,btcMarketRegime);
+       if(!entryAllowedByOdds(odds))continue;
        rotationLocks[strategy]=true;
        try{
         const ticker=await binance('ticker/price?symbol='+symbol+'USDT');
         const entry=Number(ticker.price);
         if(!(entry>0))continue;
-        const lv=levels(strategy,analysis,entry);
-        const total=equity(book,rate);
-        const riskUsd=total*RISK*rate;
-        const allocUsd=total*MAX_ALLOC*rate;
-        const stopDistance=Math.max(entry-lv.stop,entry*.0005);
-        const openRiskUsd=book.positions.reduce((sum,p)=>sum+Math.max(0,Number(p.qty)||0)*Math.max(0,(Number(p.entry)||0)-(Number(p.stop)||0)),0);
-        const remainingPortfolioRiskUsd=Math.max(0,total*MAX_PORTFOLIO_RISK*rate-openRiskUsd);
-        const desiredQty=Math.min(
-         riskUsd/stopDistance,
-         remainingPortfolioRiskUsd/stopDistance,
-         allocUsd/entry
-        );
+        const liveLv=levels(strategy,analysis,entry),total=equity(book,rate);
+        const target1NetPct=((liveLv.target1/entry)*(1-FEE)/(1+FEE)-1)*100;
+        const edgeFactor=Math.max(.25,Math.min(1,(odds.target1ProbabilityPct/100)*(odds.expectedNetPct/Math.max(target1NetPct,.1))));
+        const allocUsd=total*MAX_ALLOC*edgeFactor*rate,desiredQty=allocUsd/entry;
         const desiredCostTL=desiredQty*entry/rate*(1+FEE);
         // Yeni fırsatı, eldeki pozisyonların hedefe kalan net getirisiyle kıyasla.
         // Yalnızca daha iyi fırsat varsa ve yeterli nakit/pozisyon yeri yoksa rotasyon yap.
         if(book.cash<desiredCostTL*0.90||book.positions.length>=MAX_POSITIONS){
-         const newNetPct=((lv.target/entry)*(1-FEE)/(1+FEE)-1)*100;
-         const candidates=book.positions.map(p=>{
-          const live=livePrices.get(p.symbol)||p.lastPrice||p.entry;
-          const remainingNetPct=((p.target/live)*(1-FEE)/(1+FEE)-1)*100;
-          const exitValue=p.qty*live/rate*(1-FEE);
-          const exitPnl=exitValue-p.costTL;
-          return {p,live,remainingNetPct,exitPnl};
-         }).filter(x=>x.remainingNetPct+0.75<newNetPct);
+         const newNetPct=odds.expectedNetPct;
+         const candidates=book.positions.map(p=>{const live=livePrices.get(p.symbol)||p.lastPrice||p.entry,remainingNetPct=Number(p.expectedNetPct)||-Infinity,exitValue=p.qty*live/rate*(1-FEE),exitPnl=exitValue-p.costTL;return {p,live,remainingNetPct,exitPnl}}).filter(x=>x.remainingNetPct+0.75<newNetPct);
          // Uygun pozisyonlar arasından satış anındaki zararı en az olanı seç.
          candidates.sort((a,b)=>b.exitPnl-a.exitPnl);
          const chosen=candidates[0];
@@ -267,7 +277,8 @@ async function main(){
         book.positions.push({
         id:strategy+'-'+interval+'-'+symbol+'-'+last.t,
         strategy,symbol,name:coin.name,timeframe:interval,qty,entry,lastPrice:entry,
-        target:lv.target,stop:lv.stop,costTL,
+        target:liveLv.target1,target1:liveLv.target1,target2:liveLv.target2,costTL,
+        target1ProbabilityPct:odds.target1ProbabilityPct,target2ProbabilityPct:odds.target2ProbabilityPct,adverseProbabilityPct:odds.adverseProbabilityPct,expectedNetPct:odds.expectedNetPct,probabilitySamples:odds.samples,
         pattern:analysis.pattern&&analysis.pattern.name||(strategy==='alSat'?'Al/Sat sinyali':'Yükseliş formasyonu'),btcRegime:btcMarketRegime,
         openedAt:Date.now(),entryBar:last.t
        });
@@ -296,6 +307,7 @@ async function main(){
  let totalEquity=0,totalPnl=0,totalOpen=0;
  for(const strategy of STRATEGIES){
   const book=s.strategies[strategy];
+  for(const pos of book.positions){if(!pos.target1)pos.target1=Number(pos.target)||Number(pos.entry);if(!pos.target2)pos.target2=pos.target1;delete pos.stop;}
   const value=equity(book,rate);
   const pnl=value-START;
   totalEquity+=value;
