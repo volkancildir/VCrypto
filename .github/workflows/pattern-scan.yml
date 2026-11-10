@@ -1,5 +1,10 @@
 name: Background Formasyon Scan
 on:
+  push:
+    paths:
+      - 'pattern-scan-worker.js'
+      - 'pattern-engine.js'
+      - '.github/workflows/pattern-scan.yml'
   workflow_dispatch:
   schedule:
     - cron: '*/15 * * * *'
