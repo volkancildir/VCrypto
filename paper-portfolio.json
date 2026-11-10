@@ -746,7 +746,7 @@
       ],
       "sampleWarning": null,
       "survivorshipWarning": "Universe is the current top 100 by market cap, not historical point-in-time membership.",
-      "updatedAt": "2026-11-10T20:16:00.684Z"
+      "updatedAt": "2026-11-10T20:27:45.720Z"
     },
     "1h": {
       "interval": "1h",
@@ -800,11 +800,11 @@
       ],
       "sampleWarning": null,
       "survivorshipWarning": "Universe is the current top 100 by market cap, not historical point-in-time membership.",
-      "updatedAt": "2026-11-10T20:16:13.780Z"
+      "updatedAt": "2026-11-10T20:27:57.415Z"
     }
   },
   "fxRate": 0.019919,
-  "updatedAt": "2026-11-10T20:26:47.019Z",
+  "updatedAt": "2026-11-10T20:27:57.415Z",
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
