@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),https=require('https'),vm=require('vm');
-const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MIN_MATCHES=30,ENTRY_T1_PROB=60,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
+const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MIN_MATCHES=80,ENTRY_T1_PROB=80,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
 const STRATEGIES=['alSat','formasyon','birlesik'];
 const EXCLUDED=new Set(['USDT','USDC','BUSD','FDUSD','TUSD','DAI','USDE','USDS','USD1','PYUSD','EURC','USTC','USDD','FRAX','USDP','USDX','WBTC','STETH','WSTETH']);
 function get(url,timeout=15000){return new Promise((resolve,reject)=>{const req=https.get(url,{headers:{'user-agent':'VCrypto-paper-simulation/2.0','accept':'application/json'}},res=>{let b='';res.setEncoding('utf8');res.on('data',x=>b+=x);res.on('end',()=>{if(res.statusCode<200||res.statusCode>=300)return reject(Error('HTTP '+res.statusCode+' '+url));try{resolve(JSON.parse(b))}catch(e){reject(e)}})});req.setTimeout(timeout,()=>req.destroy(Error('timeout')));req.on('error',reject)})}
@@ -52,10 +52,16 @@ function regimeAllows(strategy,a,regime){
  return a.score>=a.threshold+0.75;
 }
 
+function wilsonLowerPct(wins,total){
+ if(!(total>0))return 0;
+ const z=1.96,p=wins/total,z2=z*z;
+ return (p+z2/(2*total)-z*Math.sqrt((p*(1-p)+z2/(4*total))/total))/(1+z2/total)*100;
+}
 function historicalOdds(candles,btcCandles,E,strategy,analysis,entry,lv,regime){
- const empty={samples:0,target1ProbabilityPct:null,target2ProbabilityPct:null,adverseProbabilityPct:null,expectedNetPct:null};
+ const empty={samples:0,target1ProbabilityPct:null,target2ProbabilityPct:null,adverseProbabilityPct:null,expectedNetPct:null,profitFactor:null,wilsonLowerPct:null};
  if(!Array.isArray(candles)||candles.length<260||!(analysis.atr>0&&entry>0&&lv.target1>entry))return empty;
- const btcIndex=new Map(btcCandles.map((x,i)=>[x.t,i])),r1=(lv.target1-entry)/analysis.atr,r2=(lv.target2-entry)/analysis.atr;
+ const btcIndex=new Map(btcCandles.map((x,i)=>[x.t,i]));
+ const r1=(lv.target1-entry)/analysis.atr,r2=(lv.target2-entry)/analysis.atr;
  if(!(r1>0&&r2>=r1))return empty;
  const samples=[],last=candles.length-OUTCOME_HORIZON-2;
  for(let i=220;i<=last;i+=2){
@@ -66,18 +72,42 @@ function historicalOdds(candles,btcCandles,E,strategy,analysis,entry,lv,regime){
   if(analysis.pattern){if(!pattern||pattern.name!==analysis.pattern.name||pattern.direction!==1)continue;if(Math.abs(Number(pattern.qualityScore||0)-Number(analysis.pattern.qualityScore||0))>15)continue}
   else if(pattern&&pattern.direction<0)continue;
   const tr=[];for(let j=Math.max(1,i-13);j<=i;j++){const k=candles[j],p=candles[j-1];tr.push(Math.max(k.h-k.l,Math.abs(k.h-p.c),Math.abs(k.l-p.c)))}
-  const atr=tr.reduce((a,b)=>a+b,0)/Math.max(1,tr.length),open=candles[i+1].o;if(!(atr>0&&open>0))continue;
-  const t1=open+r1*atr,t2=open+r2*atr,adverse=open-1.5*atr;let hit1=false,hit2=false,adverseFirst=false;
-  for(let j=i+1;j<=Math.min(candles.length-1,i+OUTCOME_HORIZON);j++){const k=candles[j];if(!hit1&&k.l<=adverse)adverseFirst=true;if(k.h>=t2)hit2=true;if(k.h>=t1)hit1=true}
-  const end=candles[Math.min(candles.length-1,i+OUTCOME_HORIZON)].c,netPct=hit1?((t1/open)*(1-FEE)/(1+FEE)-1)*100:((end/open)*(1-FEE)/(1+FEE)-1)*100;
-  samples.push({hit1,hit2,adverseFirst,netPct});
+  const atr=tr.reduce((a,b)=>a+b,0)/Math.max(1,tr.length),open=candles[i+1].o;
+  if(!(atr>0&&open>0))continue;
+  const t1=open+r1*atr,t2=open+r2*atr,adverse=open-1.5*atr;
+  let result='horizon',exitPrice=null,target2First=false;
+  for(let j=i+1;j<=Math.min(candles.length-1,i+OUTCOME_HORIZON);j++){
+   const k=candles[j],bad=k.l<=adverse,hit1=k.h>=t1,hit2=k.h>=t2;
+   // Mum içi sıra bilinemez: hedef ve olumsuz seviye aynı mumdaysa zarar önce kabul edilir.
+   if(bad&&(hit1||hit2)){result='adverse';exitPrice=adverse;break}
+   if(bad){result='adverse';exitPrice=adverse;break}
+   if(hit1){result='target1';exitPrice=t1;if(hit2)target2First=true;break}
+  }
+  if(exitPrice===null)exitPrice=candles[Math.min(candles.length-1,i+OUTCOME_HORIZON)].c;
+  const netPct=(exitPrice/open*(1-FEE)/(1+FEE)-1)*100;
+  samples.push({target1:result==='target1',target2:result==='target1'&&target2First,adverse:result==='adverse',netPct});
  }
  if(!samples.length)return empty;
- const n=samples.length;
- return {samples:n,target1ProbabilityPct:samples.filter(x=>x.hit1).length/n*100,target2ProbabilityPct:samples.filter(x=>x.hit2).length/n*100,adverseProbabilityPct:samples.filter(x=>x.adverseFirst).length/n*100,expectedNetPct:samples.reduce((a,x)=>a+x.netPct,0)/n};
+ const n=samples.length,wins=samples.filter(x=>x.target1).length,positive=samples.filter(x=>x.netPct>0).reduce((a,x)=>a+x.netPct,0),negative=-samples.filter(x=>x.netPct<0).reduce((a,x)=>a+x.netPct,0);
+ return {
+  samples:n,
+  target1ProbabilityPct:wins/n*100,
+  target2ProbabilityPct:samples.filter(x=>x.target2).length/n*100,
+  adverseProbabilityPct:samples.filter(x=>x.adverse).length/n*100,
+  expectedNetPct:samples.reduce((a,x)=>a+x.netPct,0)/n,
+  profitFactor:negative>0?positive/negative:positive>0?null:0,
+  wilsonLowerPct:wilsonLowerPct(wins,n)
+ };
 }
-function entryAllowedByOdds(o){return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct>=ENTRY_T1_PROB&&o.expectedNetPct>0}
-function exitAllowedByOdds(o){return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct<EXIT_T1_PROB&&o.adverseProbabilityPct>=EXIT_ADVERSE_PROB}
+function entryAllowedByOdds(o){
+ return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct>=ENTRY_T1_PROB&&
+  o.wilsonLowerPct>=70&&o.expectedNetPct>=0.25&&
+  (o.profitFactor===null||o.profitFactor>=1.5);
+}
+function exitAllowedByOdds(o){
+ return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct<EXIT_T1_PROB&&
+  o.adverseProbabilityPct>=EXIT_ADVERSE_PROB;
+}
 
 function formasyonBacktest(candles,btcCandles,E,symbol){
  const n=candles.length,start=220;
