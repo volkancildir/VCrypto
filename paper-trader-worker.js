@@ -101,7 +101,7 @@ function historicalOdds(candles,btcCandles,E,strategy,analysis,entry,lv,regime){
 }
 function entryAllowedByOdds(o){
  return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct>=ENTRY_T1_PROB&&
-  o.wilsonLowerPct>=70&&o.expectedNetPct>=0.25&&
+  o.wilsonLowerPct>=70&&o.expectedNetPct>=10&&
   (o.profitFactor===null||o.profitFactor>=1.5);
 }
 function exitAllowedByOdds(o){
