@@ -225,8 +225,9 @@ async function main(){
  const btc1=await binance('klines?symbol=BTCUSDT&interval=1h&limit=3');
  const closed4=Number(btc4[btc4.length-2][0]);
  const closed1=Number(btc1[btc1.length-2][0]);
- const due4=closed4>Number(s.scanBars['4h']||0);
- const due1=closed1>Number(s.scanBars['1h']||0);
+ const forceScan=process.env.GITHUB_EVENT_NAME==='push';
+ const due4=forceScan||closed4>Number(s.scanBars['4h']||0);
+ const due1=forceScan||closed1>Number(s.scanBars['1h']||0);
 
  if((due4||due1)&&!resetApplied){
   const coins=await universe();
