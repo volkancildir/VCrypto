@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),https=require('https'),vm=require('vm');
-const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MIN_MATCHES=80,ENTRY_T1_PROB=80,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
+const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MIN_MATCHES=30,ENTRY_T1_PROB=60,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
 const STRATEGIES=['alSat','formasyon','birlesik'];
 const EXCLUDED=new Set(['USDT','USDC','BUSD','FDUSD','TUSD','DAI','USDE','USDS','USD1','PYUSD','EURC','USTC','USDD','FRAX','USDP','USDX','WBTC','STETH','WSTETH']);
 function get(url,timeout=15000){return new Promise((resolve,reject)=>{const req=https.get(url,{headers:{'user-agent':'VCrypto-paper-simulation/2.0','accept':'application/json'}},res=>{let b='';res.setEncoding('utf8');res.on('data',x=>b+=x);res.on('end',()=>{if(res.statusCode<200||res.statusCode>=300)return reject(Error('HTTP '+res.statusCode+' '+url));try{resolve(JSON.parse(b))}catch(e){reject(e)}})});req.setTimeout(timeout,()=>req.destroy(Error('timeout')));req.on('error',reject)})}
@@ -100,9 +100,11 @@ function historicalOdds(candles,btcCandles,E,strategy,analysis,entry,lv,regime){
  };
 }
 function entryAllowedByOdds(o){
+ // Ekrandaki strateji kurallarıyla aynı eşik: en az 30 benzer örnek,
+ // Hedef 1 olasılığı en az %60 ve komisyon sonrası beklenen net getiri pozitif.
+ // Ek olarak geçmiş örneklerde kâr faktörü 1.2 altındaysa işlem açma.
  return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct>=ENTRY_T1_PROB&&
-  o.wilsonLowerPct>=70&&o.expectedNetPct>=10&&
-  (o.profitFactor===null||o.profitFactor>=1.5);
+  o.expectedNetPct>0&&(o.profitFactor===null||o.profitFactor>=1.2);
 }
 function exitAllowedByOdds(o){
  return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct<EXIT_T1_PROB&&
