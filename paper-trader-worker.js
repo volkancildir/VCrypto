@@ -41,10 +41,10 @@ function indicatorContext(candles,series,btcCandles){
  const bearish=e20!=null&&e50!=null&&e200!=null&&e20<e50&&e50<e200;
  const momentum=hist!=null&&prevHist!=null&&hist>prevHist;
  const pullback=c[i]>e20&&c[i-1]<=ema(c.slice(0,-1).slice(-120),20)*1.012;
+ const rs=relativeStrength(candles,btcCandles);
  const volumeStrong=volumeRatio>=1.20&&(obvUp||cmf>.04);
  const indicatorChecks={emaTrend:trend,priceAboveEma20:e20!=null&&c[i]>e20,macdMomentum:hist!=null&&prevHist!=null&&hist>prevHist&&hist>0,rsiHealthy:rsi>=52&&rsi<=68,volume:volumeRatio>=1.10,moneyFlow:cmf>.05,obvTrend:obvUp,donchianBreakout:breakoutUp,relativeStrength20:rs!=null&&rs.rs20>0,relativeStrength50:rs!=null&&rs.rs50>0};
  const indicatorPassCount=Object.values(indicatorChecks).filter(Boolean).length;
- const rs=relativeStrength(candles,btcCandles);
  let score=0;
  if(trend)score+=2;if(c[i]>e20)score+=.5;if(momentum)score+=1;
  if(rsi>=52&&rsi<=68)score+=.75;if(volumeRatio>=1.1)score+=.5;
