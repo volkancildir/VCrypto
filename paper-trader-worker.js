@@ -134,7 +134,9 @@ function formasyonBacktest(candles,btcCandles,E,symbol){
  for(let i=start;i<n;i++){
   const candle=candles[i],prefix=candles.slice(0,i+1);
   if(pos){
-   if(candle.h>=pos.target1){finish(candle.o>pos.target1?candle.o:pos.target1,i,'Target 1');continue}
+   const hitStop=candle.l<=pos.stop,hitTarget=candle.h>=pos.target1;
+   if(hitStop){finish(candle.o<pos.stop?candle.o:pos.stop,i,'Stop-loss');continue}
+   if(hitTarget){finish(candle.o>pos.target1?candle.o:pos.target1,i,'Target 1');continue}
    const exitPattern=E.detectChartPattern(prefix);
    if(exitPattern&&exitPattern.direction===-1){finish(candle.c,i,'bearish pattern');continue}
    continue;
@@ -170,7 +172,7 @@ function formasyonBacktest(candles,btcCandles,E,symbol){
   const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:candle.c*.03;
   const lv=levels('formasyon',{pattern,atr,atrTarget:candle.c+2*atr},entry);
   if(!(lv.target1>entry&&lv.target2>lv.target1))continue;
-  pos={entry,target1:lv.target1,target2:lv.target2,entryTime:candles[i+1].t,quality:pattern.qualityScore};
+  pos={entry,target1:lv.target1,target2:lv.target2,stop:entry-Math.max(atr*1.5,entry*.008),entryTime:candles[i+1].t,quality:pattern.qualityScore};
  }
  if(pos)finish(candles[n-1].c,n-1,'end of sample');
  return trades;
@@ -191,7 +193,7 @@ function formasyonBacktestMetrics(trades){
 }
 function summarizeFormasyonWalkForward(trades,interval,coinsTested,bars){
  return {
-  interval,coinsTested,bars,method:'Chronological 3-fold exit test; next-candle-open entries; Target 1 or confirmed bearish pattern exits; no stop-loss; 0.1% fee each side; live entries additionally require 30+ historical analogs and probability thresholds',
+  interval,coinsTested,bars,method:'Chronological 3-fold exit test; next-candle-open entries; Target 1 or confirmed bearish pattern exits; ATR-based stop-loss; 0.1% fee each side; historical analogs influence sizing rather than vetoing low-sample signals',
   overall:formasyonBacktestMetrics(trades),
   folds:[0,1,2].map(fold=>({fold:fold+1,...formasyonBacktestMetrics(trades.filter(t=>t.fold===fold))})),
   sampleWarning:trades.length<30?'Fewer than 30 closed trades: results are preliminary and statistically weak.':null,
@@ -243,7 +245,7 @@ async function main(){
    const btcCandles=Array.isArray(btcRaw)?btcRaw.slice(0,-1).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})):[];
    const btcMarketRegime=classifyBtcRegime(btcCandles);
    console.log('BTC regime',interval,btcMarketRegime);
-   let next=0,opened=0,closed=0,failed=0;const backtestTrades=[];let backtestCoins=0,backtestBars=0;
+   let next=0,opened=0,closed=0,failed=0;const rejections={noSignal:0,signal:0,regime:0,odds:0,positionCap:0,cash:0};const backtestTrades=[];let backtestCoins=0,backtestBars=0;
    // Her sanal portföy için eşzamanlı taramalarda çift satış/alımı önle.
    const rotationLocks=Object.fromEntries(STRATEGIES.map(k=>[k,false]));
    async function worker(){
@@ -281,9 +283,12 @@ async function main(){
        }
        if(!isNew||book.positions.some(p=>p.symbol===symbol&&p.timeframe===interval))continue;
        const analysis=analyze(candles,E,btcCandles);
-       if(!analysis||!allowed(strategy,analysis)||!regimeAllows(strategy,analysis,btcMarketRegime)||rotationLocks[strategy])continue;
+       if(!analysis){rejections.noSignal++;continue}
+        if(!allowed(strategy,analysis)){rejections.signal++;continue}
+        if(!regimeAllows(strategy,analysis,btcMarketRegime)){rejections.regime++;continue}
+        if(rotationLocks[strategy])continue;
        const oddsLevels=levels(strategy,analysis,last.c),odds=historicalOdds(candles,btcCandles,E,strategy,analysis,last.c,oddsLevels,btcMarketRegime);
-       if(!entryAllowedByOdds(odds,analysis))continue;
+       if(!entryAllowedByOdds(odds,analysis)){rejections.odds++;continue}
        rotationLocks[strategy]=true;
        try{
         const ticker=await binance('ticker/price?symbol='+symbol+'USDT');
@@ -309,7 +314,8 @@ async function main(){
           closed++;
          }
         }
-        if(book.positions.length>=MAX_POSITIONS||book.cash<desiredCostTL*0.90)continue;
+        if(book.positions.length>=MAX_POSITIONS){rejections.positionCap++;continue}
+         if(book.cash<desiredCostTL*0.90){rejections.cash++;continue}
         const cashUsd=book.cash*rate;
         const qty=Math.min(desiredQty,cashUsd/(entry*(1+FEE)));
         const costTL=qty*entry/rate*(1+FEE);
@@ -339,7 +345,7 @@ async function main(){
    s.formasyonBacktest=s.formasyonBacktest||{};
    s.formasyonBacktest[interval]={...summarizeFormasyonWalkForward(backtestTrades,interval,backtestCoins,backtestBars),updatedAt:new Date().toISOString()};
    s.scanBars[interval]=interval==='4h'?closed4:closed1;
-   console.log(interval,{opened,closed,failed});
+   console.log(interval,{opened,closed,failed,rejections});
   }
  }
 
