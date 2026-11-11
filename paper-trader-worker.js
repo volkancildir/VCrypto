@@ -41,13 +41,16 @@ function indicatorContext(candles,series,btcCandles){
  const bearish=e20!=null&&e50!=null&&e200!=null&&e20<e50&&e50<e200;
  const momentum=hist!=null&&prevHist!=null&&hist>prevHist;
  const pullback=c[i]>e20&&c[i-1]<=ema(c.slice(0,-1).slice(-120),20)*1.012;
+ const volumeStrong=volumeRatio>=1.20&&(obvUp||cmf>.04);
+ const indicatorChecks={emaTrend:trend,priceAboveEma20:e20!=null&&c[i]>e20,macdMomentum:hist!=null&&prevHist!=null&&hist>prevHist&&hist>0,rsiHealthy:rsi>=52&&rsi<=68,volume:volumeRatio>=1.10,moneyFlow:cmf>.05,obvTrend:obvUp,donchianBreakout:breakoutUp,relativeStrength20:rs!=null&&rs.rs20>0,relativeStrength50:rs!=null&&rs.rs50>0};
+ const indicatorPassCount=Object.values(indicatorChecks).filter(Boolean).length;
  const rs=relativeStrength(candles,btcCandles);
  let score=0;
  if(trend)score+=2;if(c[i]>e20)score+=.5;if(momentum)score+=1;
  if(rsi>=52&&rsi<=68)score+=.75;if(volumeRatio>=1.1)score+=.5;
  if(cmf>.05)score+=.5;if(obvUp)score+=.35;if(breakoutUp)score+=1;
  if(rs&&rs.rs20>0)score+=.75;if(rs&&rs.rs50>0)score+=.5;
- return {e9,e20,e50,e200,rsi,hist,prevHist,momentum,obvUp,cmf,breakoutUp,breakdown,bbWidth,atr,volumeRatio,trend,bearish,pullback,rs20:rs?rs.rs20:null,rs50:rs?rs.rs50:null,score};
+ return {e9,e20,e50,e200,rsi,hist,prevHist,momentum,obvUp,cmf,breakoutUp,breakdown,bbWidth,atr,volumeRatio,volumeStrong,indicatorChecks,indicatorPassCount,trend,bearish,pullback,rs20:rs?rs.rs20:null,rs50:rs?rs.rs50:null,score};
 }
 function seriesAtr(candles){const trs=[];for(let j=Math.max(1,candles.length-14);j<candles.length;j++){const k=candles[j],p=candles[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-p.c),Math.abs(k.l-p.c)))}return trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:(candles.at(-1)?.c||0)*.03}
 function analyze(candles,E,btcCandles){
@@ -57,6 +60,7 @@ function analyze(candles,E,btcCandles){
  const last=candles[i],range=Math.max(last.h-last.l,1e-12),body=Math.abs(last.c-last.o)/range,loc=(last.c-last.l)/range;
  const volumeConfirmed=ctx.volumeRatio>=1.10||ctx.obvUp&&ctx.cmf>.04;
  const patternConfirmed=!!(pattern&&pattern.direction===1&&pattern.qualityScore>=65&&body>=.35&&loc>=.65&&last.c>ctx.e20&&ctx.rsi>=48&&ctx.rsi<=72&&volumeConfirmed&&(ctx.rs20==null||ctx.rs20>-.02));
+ const formasyonConfirmed=patternConfirmed&&ctx.volumeStrong===true;
  const trendEntry=ctx.trend&&last.c>ctx.e20&&ctx.rsi>=52&&ctx.rsi<=68&&ctx.momentum&&ctx.volumeRatio>=.90&&ctx.rs20!=null&&ctx.rs20>0;
  const breakoutEntry=ctx.trend&&ctx.breakoutUp&&ctx.rsi>=54&&ctx.rsi<=72&&ctx.momentum&&ctx.volumeRatio>=1.20&&ctx.rs20!=null&&ctx.rs20>.015;
  const bearishExit=ctx.bearish&&ctx.momentum===false&&ctx.rsi<48;
@@ -64,14 +68,14 @@ function analyze(candles,E,btcCandles){
  const score=ctx.score+(patternConfirmed?1.5:0);
  const threshold=3.5;
  const atr=ctx.atr;
- return {alSignal,pattern,patternConfirmed,validated:false,atr,atrTarget:entry+2.5*atr,score,threshold,
-  rs20:ctx.rs20,rs50:ctx.rs50,volumeRatio:ctx.volumeRatio,volumeConfirmed,
+ return {alSignal,pattern,patternConfirmed,formasyonConfirmed,validated:false,atr,atrTarget:entry+2.5*atr,score,threshold,
+  rs20:ctx.rs20,rs50:ctx.rs50,volumeRatio:ctx.volumeRatio,volumeConfirmed,volumeStrong:ctx.volumeStrong,indicatorChecks:ctx.indicatorChecks,indicatorPassCount:ctx.indicatorPassCount,
   trendEntry,breakoutEntry,bearishExit,indicatorContext:ctx,
   signalConfidence:Math.min(1,Math.max(.25,(score-threshold+2)/4))};
 }
 function allowed(strategy,a){
- if(strategy==='alSat')return a.alSignal==='AL'&&(a.trendEntry||a.breakoutEntry);
- if(strategy==='formasyon')return a.patternConfirmed===true;
+ if(strategy==='alSat')return a.indicatorPassCount>=7&&a.volumeStrong===true;
+ if(strategy==='formasyon')return a.formasyonConfirmed===true;
  if(strategy==='birlesik')return a.alSignal==='AL'&&a.patternConfirmed===true;
  return false;
 }
@@ -102,8 +106,10 @@ function classifyBtcRegime(candles){
  return 'sideways';
 }
 function regimeAllows(strategy,a,regime){
+ // Al/Sat ve Formasyon motorlarinda kullanicinin belirledigi giris kurallari disinda BTC rejim filtresi uygulanmaz.
+ if(strategy==='alSat'||strategy==='formasyon')return true;
+ // Birlesik motorun eski BTC rejim ve giris kosullari aynen korunur.
  if(regime==='bear')return a.score>=a.threshold+1.25&&a.volumeConfirmed===true;
- if(strategy==='formasyon')return !!(a.pattern&&a.pattern.direction===1&&a.patternConfirmed===true);
  if(strategy==='birlesik')return a.alSignal==='AL'||!!(a.pattern&&a.pattern.direction===1&&a.patternConfirmed===true);
  return a.alSignal==='AL';
 }
@@ -164,6 +170,59 @@ function exitAllowedByOdds(o){
   o.adverseProbabilityPct>=EXIT_ADVERSE_PROB;
 }
 
+async function fetchOneYearCandles(symbol,interval){
+ const startYear=Date.now()-365*24*60*60*1000;
+ let startTime=startYear,rows=[];
+ for(let page=0;page<12;page++){
+  const raw=await binance('klines?symbol='+symbol+'USDT&interval='+interval+'&startTime='+startTime+'&limit=1000');
+  if(!Array.isArray(raw)||!raw.length)break;
+  rows.push(...raw);
+  const lastOpen=Number(raw[raw.length-1][0]);
+  if(!Number.isFinite(lastOpen)||raw.length<1000)break;
+  startTime=lastOpen+1;
+ }
+ const now=Date.now(),seen=new Set();
+ return rows.filter(k=>Number(k[6])<now&&!seen.has(Number(k[0]))&&seen.add(Number(k[0])))
+  .map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}))
+  .filter(k=>k.t>=startYear)
+  .sort((a,b)=>a.t-b.t);
+}
+function scoreHistoricalPattern(candles,E,patternName){
+ const yearStart=Date.now()-365*24*60*60*1000,recentStart=Date.now()-182.5*24*60*60*1000;
+ const old={wins:0,total:0},recent={wins:0,total:0};
+ if(!Array.isArray(candles)||candles.length<100)return {score:0,year:old,lastSixMonths:recent,weightedScore:0,method:'Insufficient one-year candle history'};
+ const horizon=24,cooldown=24;
+ let lastAccepted=-cooldown;
+ for(let i=45;i<candles.length-horizon-1;i++){
+  const candle=candles[i];
+  if(candle.t<yearStart||i-lastAccepted<cooldown)continue;
+  const pattern=E.detectChartPattern(candles.slice(0,i+1));
+  if(!pattern||pattern.direction!==1||pattern.name!==patternName)continue;
+  const entry=Number(candles[i+1].o),target=Number(pattern.targets&&pattern.targets[0]);
+  if(!(entry>0&&target>entry))continue;
+  let stop=Number(pattern.stop);
+  if(!(stop>0&&stop<entry)){
+   const trs=[];
+   for(let j=Math.max(1,i-13);j<=i;j++){const k=candles[j],p=candles[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-p.c),Math.abs(k.l-p.c)))}
+   const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:entry*.02;
+   stop=entry-Math.max(atr*1.5,entry*.008);
+  }
+  let won=false;
+  for(let j=i+1;j<=Math.min(candles.length-1,i+horizon);j++){
+   const k=candles[j],hitStop=k.l<=stop,hitTarget=k.h>=target;
+   if(hitStop){won=false;break}
+   if(hitTarget){won=true;break}
+  }
+  const bucket=candle.t>=recentStart?recent:old;
+  bucket.total++;
+  if(won)bucket.wins++;
+  lastAccepted=i;
+ }
+ const pct=x=>x.total?x.wins/x.total*100:0;
+ const oldPct=pct(old),recentPct=pct(recent);
+ const weightedScore=old.total>0&&recent.total>0?oldPct*.40+recentPct*.60:0;
+ return {score:weightedScore,weightedScore,year:old,lastSixMonths:recent,yearWinRatePct:oldPct,lastSixMonthsWinRatePct:recentPct,patternName,method:'Same bullish pattern type; next-candle-open entry; first target before pattern stop within 24 candles; unresolved outcomes count as failures; first 6 months 40%, latest 6 months 60%'};
+}
 function formasyonBacktest(candles,btcCandles,E,symbol){
  const n=candles.length,start=220;
  if(n<=start+2||btcCandles.length<=start)return [];
@@ -289,7 +348,7 @@ async function main(){
    const btcCandles=Array.isArray(btcRaw)?btcRaw.slice(0,-1).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})):[];
    const btcMarketRegime=classifyBtcRegime(btcCandles);
    console.log('BTC regime',interval,btcMarketRegime);
-   let next=0,opened=0,closed=0,failed=0;const rejections={noSignal:0,signal:0,regime:0,odds:0,positionCap:0,cash:0};const backtestTrades=[];let backtestCoins=0,backtestBars=0;
+   let next=0,opened=0,closed=0,failed=0;const rejections={noSignal:0,signal:0,regime:0,odds:0,historyScore:0,positionCap:0,cash:0};const backtestTrades=[];let backtestCoins=0,backtestBars=0;
    // Her sanal portföy için eşzamanlı taramalarda çift satış/alımı önle.
    const rotationLocks=Object.fromEntries(STRATEGIES.map(k=>[k,false]));
    async function worker(){
@@ -303,6 +362,7 @@ async function main(){
       if(!Array.isArray(raw)||raw.length<110){failed++;continue}
       const candles=raw.slice(0,-1).map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]}));
       const last=candles[candles.length-1];
+      let analysisCache=null,formHistoryCache=null,formHistoryLoaded=false;
       if((coin.rank||999)<=100&&candles.length>=240){
        backtestTrades.push(...formasyonBacktest(candles,btcCandles,E,symbol));
        backtestCoins++;
@@ -323,9 +383,20 @@ async function main(){
         continue;
        }
        if(!isNew||book.positions.some(p=>p.symbol===symbol&&p.timeframe===interval))continue;
-       const analysis=analyze(candles,E,btcCandles);
+       const analysis=analysisCache||(analysisCache=analyze(candles,E,btcCandles));
        if(!analysis){rejections.noSignal++;continue}
         if(!allowed(strategy,analysis)){rejections.signal++;continue}
+        let historyScore=null;
+        if(strategy==='formasyon'){
+         if(!formHistoryLoaded){
+          formHistoryLoaded=true;
+          const yearCandles=await fetchOneYearCandles(symbol,interval);
+          formHistoryCache=scoreHistoricalPattern(yearCandles,E,analysis.pattern.name);
+          console.log('Formasyon history',symbol,interval,formHistoryCache.weightedScore,formHistoryCache.year,formHistoryCache.lastSixMonths);
+         }
+         historyScore=formHistoryCache;
+         if(!historyScore||!(historyScore.weightedScore>60)){rejections.historyScore++;continue}
+        }
         if(!regimeAllows(strategy,analysis,btcMarketRegime)){rejections.regime++;continue}
         if(rotationLocks[strategy])continue;
        const oddsLevels=levels(strategy,analysis,last.c),odds={samples:0,target1ProbabilityPct:null,target2ProbabilityPct:null,adverseProbabilityPct:null,expectedNetPct:null,profitFactor:null};
@@ -355,6 +426,8 @@ async function main(){
         target:liveLv.target1,target1:liveLv.target1,target2:liveLv.target2,stop:entry-stopDistance,costTL,
         target1ProbabilityPct:odds.target1ProbabilityPct,target2ProbabilityPct:odds.target2ProbabilityPct,adverseProbabilityPct:odds.adverseProbabilityPct,expectedNetPct:odds.expectedNetPct,probabilitySamples:odds.samples,
         pattern:analysis.pattern&&analysis.pattern.name||(strategy==='alSat'?'Al/Sat sinyali':'Yükseliş formasyonu'),btcRegime:btcMarketRegime,
+        indicatorPassCount:analysis.indicatorPassCount,indicatorChecks:analysis.indicatorChecks,volumeRatio:analysis.volumeRatio,volumeStrong:analysis.volumeStrong,
+        formasyonScore:historyScore?historyScore.weightedScore:null,formasyonHistory:historyScore?{year:historyScore.year,lastSixMonths:historyScore.lastSixMonths,yearWinRatePct:historyScore.yearWinRatePct,lastSixMonthsWinRatePct:historyScore.lastSixMonthsWinRatePct}:null,
         openedAt:Date.now(),entryBar:last.t
        });
         opened++;
