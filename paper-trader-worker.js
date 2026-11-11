@@ -252,6 +252,7 @@ async function main(){
     while(next<coins.length){
      const coin=coins[next++];
      const symbol=coin.symbol;
+     if(!livePrices.has(symbol))continue;
      const key=interval+'|'+symbol;
      try{
       const raw=await binance('klines?symbol='+symbol+'USDT&interval='+interval+'&limit=500');
@@ -300,22 +301,10 @@ async function main(){
         const stopDistance=Math.max(analysis.atr*1.5,entry*.008),stopPct=stopDistance/entry,riskBudgetTL=total*MAX_RISK_PER_TRADE*sampleFactor,allocationTL=Math.min(total*MAX_ALLOC*sampleFactor,riskBudgetTL/Math.max(stopPct,.005));
         const allocUsd=allocationTL*rate,desiredQty=allocUsd/entry;
         const desiredCostTL=desiredQty*entry/rate*(1+FEE);
-        // Yeni fırsatı, eldeki pozisyonların hedefe kalan net getirisiyle kıyasla.
-        // Yalnızca daha iyi fırsat varsa ve yeterli nakit/pozisyon yeri yoksa rotasyon yap.
-        if(book.cash<desiredCostTL*0.90||book.positions.length>=MAX_POSITIONS){
-         const newNetPct=odds.expectedNetPct;
-         const candidates=book.positions.map(p=>{const live=livePrices.get(p.symbol)||p.lastPrice||p.entry,remainingNetPct=Number(p.expectedNetPct)||-Infinity,exitValue=p.qty*live/rate*(1-FEE),exitPnl=exitValue-p.costTL;return {p,live,remainingNetPct,exitPnl}}).filter(x=>x.remainingNetPct+0.75<newNetPct);
-         // Uygun pozisyonlar arasından satış anındaki zararı en az olanı seç.
-         candidates.sort((a,b)=>b.exitPnl-a.exitPnl);
-         const chosen=candidates[0];
-         if(chosen){
-          chosen.p.lastPrice=chosen.live;
-          closePos(book,chosen.p,chosen.live,'Daha güçlü yeni fırsat için pozisyon rotasyonu',rate);
-          closed++;
-         }
-        }
+        // Yeni sinyal, açık pozisyonu sırf nakit yaratmak için kapatmaz.
+        // Mevcut işlemler yalnızca hedef, stop veya çıkış kuralıyla kapanır.
         if(book.positions.length>=MAX_POSITIONS){rejections.positionCap++;continue}
-         if(book.cash<desiredCostTL*0.90){rejections.cash++;continue}
+        if(book.cash<desiredCostTL*0.90){rejections.cash++;continue}
         const cashUsd=book.cash*rate;
         const qty=Math.min(desiredQty,cashUsd/(entry*(1+FEE)));
         const costTL=qty*entry/rate*(1+FEE);
