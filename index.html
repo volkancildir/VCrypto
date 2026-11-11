@@ -1358,7 +1358,7 @@ function detectChartPattern(candles){
  const e20=c.length>=20?ema(c,20):close,e50=c.length>=50?ema(c,50):close;
  const changes=[];for(let q=Math.max(1,c.length-15);q<c.length;q++)changes.push(c[q]-c[q-1]);
  const gains=mean(changes.map(x=>Math.max(0,x))),losses=mean(changes.map(x=>Math.max(0,-x))),rsi=losses===0?100:100-100/(1+gains/losses);
- const volConfirm=volRatio>=1.2;
+ const volConfirm=volRatio>=1.05;
  const quality=(direction)=>{
   const volumeScore=Math.max(0,Math.min(100,(volRatio-1)*100/0.8));
   const bodyScore=Math.max(0,Math.min(100,bodyRatio*125));
