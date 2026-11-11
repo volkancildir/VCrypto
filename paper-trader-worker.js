@@ -22,7 +22,7 @@ function relativeStrength(candles,btcCandles){
  if(![now.c,past20.c,past50.c,btcNow,btc20,btc50].every(x=>Number.isFinite(x)&&x>0))return null;
  return {rs20:(now.c/past20.c)/(btcNow/btc20)-1,rs50:(now.c/past50.c)/(btcNow/btc50)-1};
 }
-function indicatorContext(candles,series){
+function indicatorContext(candles,series,btcCandles){
  const c=candles.map(x=>x.c),h=candles.map(x=>x.h),l=candles.map(x=>x.l),v=candles.map(x=>x.v),n=c.length,i=n-1;
  const ema=(arr,p)=>{if(arr.length<p)return null;let z=arr.slice(0,p).reduce((a,b)=>a+b,0)/p,k=2/(p+1);for(let j=p;j<arr.length;j++)z=arr[j]*k+z*(1-k);return z};
  const e9=ema(c.slice(-100),9),e20=ema(c.slice(-120),20),e50=ema(c.slice(-180),50),e200=ema(c.slice(-260),200);
@@ -40,7 +40,7 @@ function indicatorContext(candles,series){
  const bearish=e20!=null&&e50!=null&&e200!=null&&e20<e50&&e50<e200;
  const momentum=hist!=null&&prevHist!=null&&hist>prevHist;
  const pullback=c[i]>e20&&c[i-1]<=ema(c.slice(0,-1).slice(-120),20)*1.012;
- const rs=relativeStrength(candles,globalThis.__btcCandles||[]);
+ const rs=relativeStrength(candles,btcCandles);
  let score=0;
  if(trend)score+=2;if(c[i]>e20)score+=.5;if(momentum)score+=1;
  if(rsi>=52&&rsi<=68)score+=.75;if(volumeRatio>=1.1)score+=.5;
@@ -52,7 +52,7 @@ function seriesAtr(candles){const trs=[];for(let j=Math.max(1,candles.length-14)
 function analyze(candles,E,btcCandles){
  const series=E.buildSignalSeries(candles),i=series.scores.length-1,entry=series.c[i];
  if(entry==null||candles.length<220)return null;
- const pattern=E.detectChartPattern(candles),ctx=indicatorContext(candles,series);
+ const pattern=E.detectChartPattern(candles),ctx=indicatorContext(candles,series,btcCandles);
  const last=candles[i],range=Math.max(last.h-last.l,1e-12),body=Math.abs(last.c-last.o)/range,loc=(last.c-last.l)/range;
  const volumeConfirmed=ctx.volumeRatio>=1.10||ctx.obvUp&&ctx.cmf>.04;
  const patternConfirmed=!!(pattern&&pattern.direction===1&&pattern.qualityScore>=65&&body>=.35&&loc>=.65&&last.c>ctx.e20&&ctx.rsi>=48&&ctx.rsi<=72&&volumeConfirmed&&(ctx.rs20==null||ctx.rs20>-.02));
