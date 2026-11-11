@@ -1,4 +1,5 @@
 'use strict';
+// Fresh portfolio scan trigger: run the current independent strategy engines against the cleared paper books.
 const fs=require('fs'),https=require('https'),vm=require('vm');
 const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MAX_RISK_PER_TRADE=.01,MIN_MATCHES=8,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
 const STRATEGIES=['alSat','formasyon','birlesik'];
