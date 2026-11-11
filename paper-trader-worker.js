@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),https=require('https'),vm=require('vm');
-const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MIN_MATCHES=30,ENTRY_T1_PROB=60,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
+const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MAX_RISK_PER_TRADE=.01,MIN_MATCHES=8,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
 const STRATEGIES=['alSat','formasyon','birlesik'];
 const EXCLUDED=new Set(['USDT','USDC','BUSD','FDUSD','TUSD','DAI','USDE','USDS','USD1','PYUSD','EURC','USTC','USDD','FRAX','USDP','USDX','WBTC','STETH','WSTETH']);
 function get(url,timeout=15000){return new Promise((resolve,reject)=>{const req=https.get(url,{headers:{'user-agent':'VCrypto-paper-simulation/2.0','accept':'application/json'}},res=>{let b='';res.setEncoding('utf8');res.on('data',x=>b+=x);res.on('end',()=>{if(res.statusCode<200||res.statusCode>=300)return reject(Error('HTTP '+res.statusCode+' '+url));try{resolve(JSON.parse(b))}catch(e){reject(e)}})});req.setTimeout(timeout,()=>req.destroy(Error('timeout')));req.on('error',reject)})}
@@ -22,8 +22,29 @@ function relativeStrength(candles,btcCandles){
  if(![now.c,past20.c,past50.c,btcNow,btc20,btc50].every(x=>Number.isFinite(x)&&x>0))return null;
  return {rs20:(now.c/past20.c)/(btcNow/btc20)-1,rs50:(now.c/past50.c)/(btcNow/btc50)-1};
 }
-function analyze(candles,E,btcCandles){const series=E.buildSignalSeries(candles),opt=E.optimizeSignal(series),i=series.scores.length-1,score=series.scores[i];if(score==null)return null;const entry=series.c[i],pattern=E.detectChartPattern(candles),trs=[];for(let j=Math.max(1,candles.length-15);j<candles.length;j++){const k=candles[j],pc=series.c[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-pc),Math.abs(k.l-pc)))}const atr=trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:entry*.03,validated=opt.trainTrades>=3&&!!(opt.train&&opt.train.net>0)&&opt.test.trades>=3&&opt.test.net>0;const target=entry+2*atr;const alSignal=score>=opt.threshold&&validated&&target>entry?'AL':score<=-opt.threshold?'SAT':'NÖTR';const rs=relativeStrength(candles,btcCandles);const baselineVolumes=candles.slice(Math.max(0,i-25),i-5).map(x=>x.v).filter(x=>Number.isFinite(x)&&x>0);const recent=candles.slice(Math.max(0,i-4),i+1);const avgVolume=baselineVolumes.length===20?baselineVolumes.reduce((a,b)=>a+b,0)/20:null;const recentAvgVolume=recent.length===5?recent.reduce((a,x)=>a+(Number.isFinite(x.v)&&x.v>0?x.v:0),0)/5:null;const volumeRatio=avgVolume&&avgVolume>0&&recentAvgVolume!=null?recentAvgVolume/avgVolume:null;const bullishVolumeBars=recent.filter(x=>x.c>x.o).length;const volumeConfirmed=Number.isFinite(volumeRatio)&&volumeRatio>=1.2&&bullishVolumeBars>=3&&candles[i].c>candles[i-1].c;const last=candles[i],candleRange=Math.max(last.h-last.l,1e-12),bodyRatio=Math.abs(last.c-last.o)/candleRange,closeLocation=(last.c-last.l)/candleRange;const patternConfirmed=!!(pattern&&pattern.direction===1&&bodyRatio>=.4&&closeLocation>=.7&&last.c>candles[i-1].c&&pattern.qualityScore>=65);return {alSignal,pattern,patternConfirmed,validated,atr,atrTarget:target,score,threshold:opt.threshold,rs20:rs?rs.rs20:null,rs50:rs?rs.rs50:null,volumeRatio,volumeConfirmed}}
-function allowed(strategy,a){const bull=!!(a.pattern&&a.pattern.direction===1);if(strategy==='alSat')return a.alSignal==='AL';if(strategy==='formasyon')return bull&&a.patternConfirmed===true;if(strategy==='birlesik')return a.alSignal==='AL'&&bull&&a.patternConfirmed===true;return false}
+function indicatorContext(candles,series){
+ const c=candles.map(x=>x.c),h=candles.map(x=>x.h),l=candles.map(x=>x.l),v=candles.map(x=>x.v),n=c.length,i=n-1;
+ const ema=(arr,p)=>{if(arr.length<p)return null;let z=arr.slice(0,p).reduce((a,b)=>a+b,0)/p,k=2/(p+1);for(let j=p;j<arr.length;j++)z=arr[j]*k+z*(1-k);return z};
+ const e9=ema(c.slice(-80),9),e21=ema(c.slice(-100),21),e50=ema(c.slice(-150),50),rsi=series.rsi[i],m=series.macd[i],ms=series.macdSignal[i],mp=series.macd[i-1],msp=series.macdSignal[i-1];
+ const obv=[];let flow=0;for(let j=1;j<n;j++){flow+=c[j]>c[j-1]?v[j]:c[j]<c[j-1]?-v[j]:0;obv.push(flow)}const obvUp=(obv.at(-1)||0)>(obv[Math.max(0,obv.length-6)]||0);
+ let mf=0,vs=0;for(let j=Math.max(0,n-20);j<n;j++){mf+=((2*c[j]-h[j]-l[j])/Math.max(h[j]-l[j],1e-12))*v[j];vs+=v[j]}
+ const cmf=vs>0?mf/vs:0,priorHigh=Math.max(...h.slice(Math.max(0,n-21),n-1)),priorLow=Math.min(...l.slice(Math.max(0,n-21),n-1)),breakoutUp=c[i]>priorHigh,breakdown=c[i]<priorLow;
+ const band=c.slice(-20),mean=band.reduce((x,y)=>x+y,0)/Math.max(1,band.length),sd=Math.sqrt(band.reduce((x,y)=>x+(y-mean)**2,0)/Math.max(1,band.length)),bbWidth=mean>0?4*sd/mean:0,atr=seriesAtr(candles);
+ let bonus=0;if(e9!=null&&e21!=null&&e9>e21)bonus+=.55;if(e21!=null&&e50!=null&&e21>e50)bonus+=.35;
+ if(m!=null&&ms!=null&&m>ms&&mp!=null&&msp!=null&&m-ms>mp-msp)bonus+=.45;if(rsi>=48&&rsi<=72)bonus+=.25;if(obvUp)bonus+=.35;if(cmf>.03)bonus+=.35;if(breakoutUp)bonus+=.65;if(bbWidth>0&&bbWidth<.08&&c[i]>c[i-1])bonus+=.25;
+ return {e9,e21,e50,rsi,obvUp,cmf,breakoutUp,breakdown,bbWidth,atr,bonus};
+}
+function seriesAtr(candles){const trs=[];for(let j=Math.max(1,candles.length-14);j<candles.length;j++){const k=candles[j],p=candles[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-p.c),Math.abs(k.l-p.c)))}return trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:(candles.at(-1)?.c||0)*.03}
+function analyze(candles,E,btcCandles){
+ const series=E.buildSignalSeries(candles),opt=E.optimizeSignal(series),i=series.scores.length-1,baseScore=series.scores[i];if(baseScore==null)return null;
+ const ctx=indicatorContext(candles,series),entry=series.c[i],pattern=E.detectChartPattern(candles),atr=ctx.atr,score=baseScore+ctx.bonus,threshold=Math.max(1.5,Math.min(2.6,Number(opt.threshold)||2));
+ const validated=opt.trainTrades>=3&&!!(opt.train&&opt.train.net>0)&&opt.test.trades>=3&&opt.test.net>0,alSignal=score>=threshold?'AL':score<=-threshold?'SAT':'NÖTR',rs=relativeStrength(candles,btcCandles);
+ const recent=candles.slice(-5),baseline=candles.slice(-25,-5).map(x=>x.v).filter(x=>Number.isFinite(x)&&x>0),avg=baseline.length?baseline.reduce((x,y)=>x+y,0)/baseline.length:0,recentAvg=recent.reduce((x,y)=>x+(Number.isFinite(y.v)&&y.v>0?y.v:0),0)/Math.max(1,recent.length),volumeRatio=avg>0?recentAvg/avg:null;
+ const last=candles[i],range=Math.max(last.h-last.l,1e-12),body=Math.abs(last.c-last.o)/range,loc=(last.c-last.l)/range,volumeConfirmed=(Number.isFinite(volumeRatio)&&volumeRatio>=1.05)||ctx.obvUp||ctx.cmf>.05;
+ const patternConfirmed=!!(pattern&&pattern.direction===1&&body>=.25&&loc>=.55&&last.c>candles[i-1].c&&pattern.qualityScore>=50);
+ return {alSignal,pattern,patternConfirmed,validated,atr,atrTarget:entry+2*atr,score,threshold,rs20:rs?rs.rs20:null,rs50:rs?rs.rs50:null,volumeRatio,volumeConfirmed,indicatorContext:ctx};
+}
+function allowed(strategy,a){const bull=!!(a.pattern&&a.pattern.direction===1&&a.patternConfirmed===true);if(strategy==='alSat')return a.alSignal==='AL';if(strategy==='formasyon')return bull;if(strategy==='birlesik')return a.alSignal==='AL'||bull;return false}
 function shouldExit(strategy,a){if(strategy==='alSat')return a.alSignal==='SAT';if(strategy==='formasyon')return !!(a.pattern&&a.pattern.direction===-1);return a.alSignal==='SAT'||!!(a.pattern&&a.pattern.direction===-1)}
 function levels(strategy,a,entry){let target1=strategy!=='alSat'&&a.pattern&&a.pattern.targets?Number(a.pattern.targets[0]):a.atrTarget;if(!(target1>entry))target1=entry+2*a.atr;let target2=strategy!=='alSat'&&a.pattern&&a.pattern.targets&&Number(a.pattern.targets[1])>target1?Number(a.pattern.targets[1]):entry+3*a.atr;if(!(target2>target1))target2=target1+Math.max(a.atr,entry*.01);return {target1,target2}}
 function classifyBtcRegime(candles){
@@ -37,19 +58,10 @@ function classifyBtcRegime(candles){
  return 'sideways';
 }
 function regimeAllows(strategy,a,regime){
- if(strategy==='formasyon'){
-  if(regime==='bull')return true;
-  if(regime==='bear'||regime==='unknown')return false;
-  return a.patternConfirmed===true&&a.volumeConfirmed===true&&
-   Number.isFinite(a.pattern&&a.pattern.qualityScore)&&a.pattern.qualityScore>=75&&
-   Number.isFinite(a.rs20)&&Number.isFinite(a.rs50)&&a.rs20>0&&a.rs50>0;
- }
- if(strategy!=='alSat'&&strategy!=='birlesik')return false;
- if(!(Number.isFinite(a.rs20)&&Number.isFinite(a.rs50)&&a.rs20>0&&a.rs50>0))return false;
- if(a.volumeConfirmed!==true)return false;
- if(regime==='bull')return true;
- if(regime==='bear'||regime==='unknown')return false;
- return a.score>=a.threshold+0.75;
+ if(regime==='bear')return a.score>=a.threshold+1.25&&a.volumeConfirmed===true;
+ if(strategy==='formasyon')return !!(a.pattern&&a.pattern.direction===1&&a.patternConfirmed===true);
+ if(strategy==='birlesik')return a.alSignal==='AL'||!!(a.pattern&&a.pattern.direction===1&&a.patternConfirmed===true);
+ return a.alSignal==='AL';
 }
 
 function wilsonLowerPct(wins,total){
@@ -67,7 +79,7 @@ function historicalOdds(candles,btcCandles,E,strategy,analysis,entry,lv,regime){
  for(let i=220;i<=last;i+=2){
   const bi=btcIndex.get(candles[i].t);if(bi==null||bi<220)continue;
   const historicalRegime=classifyBtcRegime(btcCandles.slice(0,bi+1));
-  if(regime!=='unknown'&&historicalRegime!==regime)continue;
+  if(regime==='bull'&&historicalRegime==='bear')continue;
   const prefix=candles.slice(0,i+1),pattern=E.detectChartPattern(prefix);
   if(analysis.pattern){if(!pattern||pattern.name!==analysis.pattern.name||pattern.direction!==1)continue;if(Math.abs(Number(pattern.qualityScore||0)-Number(analysis.pattern.qualityScore||0))>15)continue}
   else if(pattern&&pattern.direction<0)continue;
@@ -99,12 +111,9 @@ function historicalOdds(candles,btcCandles,E,strategy,analysis,entry,lv,regime){
   wilsonLowerPct:wilsonLowerPct(wins,n)
  };
 }
-function entryAllowedByOdds(o){
- // Ekrandaki strateji kurallarıyla aynı eşik: en az 30 benzer örnek,
- // Hedef 1 olasılığı en az %60 ve komisyon sonrası beklenen net getiri pozitif.
- // Ek olarak geçmiş örneklerde kâr faktörü 1.2 altındaysa işlem açma.
- return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct>=ENTRY_T1_PROB&&
-  o.expectedNetPct>0&&(o.profitFactor===null||o.profitFactor>=1.2);
+function entryAllowedByOdds(o,a){
+ if(!o||o.samples<MIN_MATCHES)return !!(a&&a.score>=a.threshold);
+ return Number.isFinite(o.expectedNetPct)&&o.expectedNetPct>-.25&&Number(o.target1ProbabilityPct)>=42&&(o.profitFactor===null||o.profitFactor>=.85);
 }
 function exitAllowedByOdds(o){
  return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct<EXIT_T1_PROB&&
@@ -208,15 +217,11 @@ async function main(){
    const live=livePrices.get(pos.symbol);
    if(!(live>0))continue;
    pos.lastPrice=live;
-   // Close legacy daily positions at the live quote when migrating the test to 1h.
-   if(pos.timeframe==='1d'){
-    closePos(book,pos,live,'Zaman dilimi değişimi: 1 günlük testten 1 saatliğe geçiş',rate);
-    continue;
-   }
    if(!pos.target1)pos.target1=Number(pos.target)||Number(live);
    if(!pos.target2)pos.target2=pos.target1;
-   delete pos.stop;
-   if(live>=pos.target1)closePos(book,pos,pos.target1,'Hedef 1 gerçekleşti (canlı fiyat kontrolü)',rate);
+   if(!(Number(pos.stop)>0))pos.stop=Number(pos.entry||live)*.97;
+   if(live<=pos.stop)closePos(book,pos,live,'Stop-loss: canlı fiyat stop seviyesinin altına indi',rate);
+   else if(live>=pos.target1)closePos(book,pos,pos.target1,'Hedef 1 gerçekleşti (canlı fiyat kontrolü)',rate);
   }
  }
 
@@ -263,7 +268,9 @@ async function main(){
        if(pos){
         pos.lastPrice=last.c;
         if(!isNew)continue;
-        if(last.h>=Number(pos.target1||pos.target)){closePos(book,pos,Number(pos.target1||pos.target),'Hedef 1 gerçekleşti',rate);closed++;continue}
+        const stop=Number(pos.stop||Number(pos.entry)*.97),hitStop=last.l<=stop,hitTarget=last.h>=Number(pos.target1||pos.target);
+        if(hitStop){const exit=last.o<stop?last.o:stop;closePos(book,pos,exit,'Stop-loss gerçekleşti',rate);closed++;continue}
+        if(hitTarget){closePos(book,pos,Number(pos.target1||pos.target),'Hedef 1 gerçekleşti',rate);closed++;continue}
         const analysis=analyze(candles,E,btcCandles);
         if(analysis&&shouldExit(strategy,analysis)){
          const odds=historicalOdds(candles,btcCandles,E,strategy,analysis,last.c,{target1:Number(pos.target1||pos.target),target2:Number(pos.target2||pos.target1||pos.target)},btcMarketRegime);
@@ -276,7 +283,7 @@ async function main(){
        const analysis=analyze(candles,E,btcCandles);
        if(!analysis||!allowed(strategy,analysis)||!regimeAllows(strategy,analysis,btcMarketRegime)||rotationLocks[strategy])continue;
        const oddsLevels=levels(strategy,analysis,last.c),odds=historicalOdds(candles,btcCandles,E,strategy,analysis,last.c,oddsLevels,btcMarketRegime);
-       if(!entryAllowedByOdds(odds))continue;
+       if(!entryAllowedByOdds(odds,analysis))continue;
        rotationLocks[strategy]=true;
        try{
         const ticker=await binance('ticker/price?symbol='+symbol+'USDT');
@@ -284,8 +291,9 @@ async function main(){
         if(!(entry>0))continue;
         const liveLv=levels(strategy,analysis,entry),total=equity(book,rate);
         const target1NetPct=((liveLv.target1/entry)*(1-FEE)/(1+FEE)-1)*100;
-        const edgeFactor=Math.max(.25,Math.min(1,(odds.target1ProbabilityPct/100)*(odds.expectedNetPct/Math.max(target1NetPct,.1))));
-        const allocUsd=total*MAX_ALLOC*edgeFactor*rate,desiredQty=allocUsd/entry;
+        const sampleFactor=odds.samples>=MIN_MATCHES?Math.max(.35,Math.min(1,(Number(odds.target1ProbabilityPct||50)/100)*(Math.max(.1,Number(odds.expectedNetPct||0)+.5)/Math.max(target1NetPct,.1)))):Math.max(.4,Math.min(1,(analysis.score-analysis.threshold+2)/5));
+        const stopDistance=Math.max(analysis.atr*1.5,entry*.008),stopPct=stopDistance/entry,riskBudgetTL=total*MAX_RISK_PER_TRADE*sampleFactor,allocationTL=Math.min(total*MAX_ALLOC*sampleFactor,riskBudgetTL/Math.max(stopPct,.005));
+        const allocUsd=allocationTL*rate,desiredQty=allocUsd/entry;
         const desiredCostTL=desiredQty*entry/rate*(1+FEE);
         // Yeni fırsatı, eldeki pozisyonların hedefe kalan net getirisiyle kıyasla.
         // Yalnızca daha iyi fırsat varsa ve yeterli nakit/pozisyon yeri yoksa rotasyon yap.
@@ -310,7 +318,7 @@ async function main(){
         book.positions.push({
         id:strategy+'-'+interval+'-'+symbol+'-'+last.t,
         strategy,symbol,name:coin.name,timeframe:interval,qty,entry,lastPrice:entry,
-        target:liveLv.target1,target1:liveLv.target1,target2:liveLv.target2,costTL,
+        target:liveLv.target1,target1:liveLv.target1,target2:liveLv.target2,stop:entry-stopDistance,costTL,
         target1ProbabilityPct:odds.target1ProbabilityPct,target2ProbabilityPct:odds.target2ProbabilityPct,adverseProbabilityPct:odds.adverseProbabilityPct,expectedNetPct:odds.expectedNetPct,probabilitySamples:odds.samples,
         pattern:analysis.pattern&&analysis.pattern.name||(strategy==='alSat'?'Al/Sat sinyali':'Yükseliş formasyonu'),btcRegime:btcMarketRegime,
         openedAt:Date.now(),entryBar:last.t
@@ -340,7 +348,7 @@ async function main(){
  let totalEquity=0,totalPnl=0,totalOpen=0;
  for(const strategy of STRATEGIES){
   const book=s.strategies[strategy];
-  for(const pos of book.positions){if(!pos.target1)pos.target1=Number(pos.target)||Number(pos.entry);if(!pos.target2)pos.target2=pos.target1;delete pos.stop;}
+  for(const pos of book.positions){if(!pos.target1)pos.target1=Number(pos.target)||Number(pos.entry);if(!pos.target2)pos.target2=pos.target1;if(!(Number(pos.stop)>0))pos.stop=Number(pos.entry)*.97;}
   const value=equity(book,rate);
   const pnl=value-START;
   totalEquity+=value;
