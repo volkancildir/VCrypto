@@ -4,6 +4,7 @@ on:
     paths:
       - 'pattern-scan-worker.js'
       - 'pattern-engine.js'
+      - 'pattern.html'
       - 'pattern-syntax-check.js'
       - 'pattern-matcher.js'
       - 'pattern-matcher-test.js'
