@@ -16,7 +16,7 @@ const TFS={
 };
 const excluded=c=>{const s=String(c.symbol||'').toUpperCase(),id=String(c.id||'').toLowerCase(),n=String(c.name||'').toLowerCase();return s==='FIGR_HELOC'||id==='figure-heloc'||s==='SSTN'||s==='PC0000031'||id.includes('rent-financing')||n.includes('rent financing platform')||n.includes('tradable na')};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function json(url,tries=4){let last;for(let i=0;i<tries;i++){try{const r=await fetch(url,{headers:{accept:'application/json'},signal:AbortSignal.timeout(20000)});if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e}return await r.json()}catch(e){last=e;await sleep(e.status===429?Math.min(15000,4000*(i+1)):700*(i+1))}}throw last||Error('Veri alınamadı')}
+async function json(url,tries=3){let last;for(let i=0;i<tries;i++){try{const r=await fetch(url,{headers:{accept:'application/json'},signal:AbortSignal.timeout(12000)});if(!r.ok){const e=new Error('HTTP '+r.status);e.status=r.status;throw e}return await r.json()}catch(e){last=e;if(e.status&&e.status!==429&&e.status<500)throw e;if(i+1<tries)await sleep(e.status===429?Math.min(12000,2500*(i+1)):500*(i+1))}}throw last||Error('Veri alınamadı')}
 async function getUniverse(){
  try{
   const pages=await Promise.all([1,2,3].map(p=>json('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page='+p+'&sparkline=false')));
@@ -30,33 +30,77 @@ async function getUniverse(){
   if(a.length<400)throw Error('Yedek kaynakta coin sayısı yetersiz: '+a.length);return a;
  }
 }
+function orderedRows(rows){return rows.filter(x=>x&&x.length>=6).map(x=>x.map(Number)).filter(x=>Number.isFinite(x[0])&&x.slice(1,6).every(Number.isFinite)).sort((a,b)=>a[0]-b[0])}
+function parseBinanceRows(list){return orderedRows((list||[]).map(k=>[k[0],k[1],k[2],k[3],k[4],k[5]]))}
+function parseOkxRows(list){return orderedRows((list||[]).map(k=>[k[0],k[1],k[2],k[3],k[4],k[5]]))}
+function parseGateRows(list){return orderedRows((list||[]).map(k=>[Number(k[0])*1000,k[5],k[3],k[4],k[2],k[6]||Number(k[1])/Math.max(Number(k[2]),1e-12)]))}
+function parseKucoinRows(list){return orderedRows((list||[]).map(k=>[Number(k[0])*1000,k[1],k[3],k[4],k[2],k[5]]))}
+function parseBitgetRows(list){return orderedRows((list||[]).map(k=>[k[0],k[1],k[2],k[3],k[4],k[5]]))}
+function parseMexcRows(list){return parseBinanceRows(list)}
+function assertParserRows(name,rows){if(rows.length!==30||rows[0][0]!==1700000000000||rows[0][1]!==10||rows[0][2]!==12||rows[0][3]!==9||rows[0][4]!==11||rows[0][5]!==100)throw Error(name+' mum dönüştürme testi başarısız');}
+function runParserSelfTests(){
+ const t=1700000000000,binance=[t,10,12,9,11,100],okx=[t,10,12,9,11,100],gate=[t/1000,1100,11,12,9,10,100],kucoin=[t/1000,10,11,12,9,100,1100],bitget=[t,10,12,9,11,100,1100];
+ const cases=[['Binance',parseBinanceRows],['OKX',parseOkxRows],['Gate',parseGateRows],['KuCoin',parseKucoinRows],['MEXC',parseMexcRows],['Bitget',parseBitgetRows]];
+ for(const [name,parse] of cases){const raw=Array.from({length:30},(_,i)=>{const x=[...({Binance:binance,OKX:okx,Gate:gate,KuCoin:kucoin,MEXC:binance,Bitget:bitget}[name])];if(name==='Gate'||name==='KuCoin')x[0]=String(t/1000+i*3600);else x[0]=t+i*3600000;return x});const rows=parse(raw);if(rows.length!==30)throw Error(name+' parser satır sayısı testi başarısız');const first=rows[0];if(first[1]!==10||first[2]!==12||first[3]!==9||first[4]!==11||first[5]!==100)throw Error(name+' OHLCV alan testi başarısız')}
+ console.log('Parser self-test: Binance, OKX, Gate, KuCoin, MEXC, Bitget başarılı');
+}
+runParserSelfTests();
 async function klines(symbol,tf){
+ const base=symbol.replace(/USDT$/,'');
  const q='klines?symbol='+encodeURIComponent(symbol)+'&interval='+tf.interval+'&limit='+tf.limit;
  let binanceError;
- for(const base of ['https://data-api.binance.vision/api/v3/','https://api.binance.com/api/v3/']){
-  try{const a=await json(base+q,2);if(!Array.isArray(a)||a.length<30)throw Error('Mum verisi yetersiz');return{rows:a,source:'Binance Spot'}}
-  catch(e){binanceError=e}
+ for(const host of ['https://data-api.binance.vision/api/v3/','https://api.binance.com/api/v3/']){
+  try{const rows=parseBinanceRows(await json(host+q,1));if(rows.length<30)throw Error('Yeterli Binance mumu yok');return{rows,source:'Binance Spot'}}catch(e){binanceError=e}
  }
- const bybitInterval={'1h':'60','4h':'240','1d':'D','1w':'W','1M':'M'}[tf.interval];
  let bybitError;
  try{
-  const u='https://api.bybit.com/v5/market/kline?category=spot&symbol='+encodeURIComponent(symbol)+'&interval='+bybitInterval+'&limit='+tf.limit;
-  const data=await json(u,2),list=data?.retCode===0?data.result?.list:null;
-  if(!Array.isArray(list)||list.length<30)throw Error(data?.retMsg||'Yeterli Bybit Spot mumu yok');
-  const rows=list.slice().reverse().map(k=>[k[0],k[1],k[2],k[3],k[4],k[5]]);
+  const interval={'1h':'60','4h':'240','1d':'D','1w':'W','1M':'M'}[tf.interval];
+  const data=await json('https://api.bybit.com/v5/market/kline?category=spot&symbol='+encodeURIComponent(symbol)+'&interval='+interval+'&limit='+tf.limit,1);
+  const rows=parseOkxRows(data?.retCode===0?data.result?.list:[]);
+  if(rows.length<30)throw Error(data?.retMsg||'Yeterli Bybit Spot mumu yok');
   return{rows,source:'Bybit Spot'};
  }catch(e){bybitError=e}
- const okxBar={'1h':'1H','4h':'4H','1d':'1Dutc','1w':'1Wutc','1M':'1Mutc'}[tf.interval];
  let okxError;
  try{
-  const inst=symbol.replace(/USDT$/,'-USDT');
-  const u='https://www.okx.com/api/v5/market/candles?instId='+encodeURIComponent(inst)+'&bar='+okxBar+'&limit='+tf.limit;
-  const data=await json(u,2),list=data?.code==='0'?data.data:null;
-  if(!Array.isArray(list)||list.length<30)throw Error(data?.msg||'Yeterli OKX Spot mumu yok');
-  const rows=list.slice().reverse().map(k=>[k[0],k[1],k[2],k[3],k[4],k[5]]);
+  const bar={'1h':'1H','4h':'4H','1d':'1Dutc','1w':'1Wutc','1M':'1Mutc'}[tf.interval],inst=base+'-USDT';
+  const data=await json('https://www.okx.com/api/v5/market/candles?instId='+encodeURIComponent(inst)+'&bar='+bar+'&limit='+tf.limit,1);
+  const rows=parseOkxRows(data?.code==='0'?data.data:[]);
+  if(rows.length<30)throw Error(data?.msg||'Yeterli OKX Spot mumu yok');
   return{rows,source:'OKX Spot'};
  }catch(e){okxError=e}
- throw Error('Binance: '+(binanceError?.message||'veri yok')+' · Bybit: '+(bybitError?.message||'veri yok')+' · OKX: '+(okxError?.message||'veri yok'));
+ let gateError;
+ try{
+  const interval={'1h':'1h','4h':'4h','1d':'1d','1w':'7d','1M':'30d'}[tf.interval],pair=base+'_USDT';
+  const data=await json('https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair='+encodeURIComponent(pair)+'&interval='+interval+'&limit='+tf.limit,1);
+  const rows=parseGateRows(Array.isArray(data)?data:[]);
+  if(rows.length<30)throw Error('Yeterli Gate.io Spot mumu yok');
+  return{rows,source:'Gate.io Spot'};
+ }catch(e){gateError=e}
+ let kucoinError;
+ try{
+  const type={'1h':'1hour','4h':'4hour','1d':'1day','1w':'1week','1M':'1month'}[tf.interval],seconds={'1h':3600,'4h':14400,'1d':86400,'1w':604800,'1M':2592000}[tf.interval],end=Math.floor(Date.now()/1000),start=end-seconds*(tf.limit+10);
+  const data=await json('https://api.kucoin.com/api/v1/market/candles?symbol='+encodeURIComponent(base+'-USDT')+'&type='+type+'&startAt='+start+'&endAt='+end,1);
+  const rows=parseKucoinRows(data?.code==='200000'?data.data:[]);
+  if(rows.length<30)throw Error(data?.msg||'Yeterli KuCoin Spot mumu yok');
+  return{rows:rows.slice(-tf.limit),source:'KuCoin Spot'};
+ }catch(e){kucoinError=e}
+ let mexcError;
+ try{
+  const interval={'1h':'1h','4h':'4h','1d':'1d','1w':'1W','1M':'1M'}[tf.interval];
+  const data=await json('https://api.mexc.com/api/v3/klines?symbol='+encodeURIComponent(symbol)+'&interval='+interval+'&limit='+tf.limit,1);
+  const rows=parseMexcRows(Array.isArray(data)?data:[]);
+  if(rows.length<30)throw Error('Yeterli MEXC Spot mumu yok');
+  return{rows,source:'MEXC Spot'};
+ }catch(e){mexcError=e}
+ let bitgetError;
+ try{
+  const granularity={'1h':'1h','4h':'4h','1d':'1day','1w':'1week','1M':'1M'}[tf.interval];
+  const data=await json('https://api.bitget.com/api/v2/spot/market/candles?symbol='+encodeURIComponent(symbol)+'&granularity='+granularity+'&limit='+tf.limit,1);
+  const rows=parseBitgetRows(data?.code==='00000'?data.data:[]);
+  if(rows.length<30)throw Error(data?.msg||'Yeterli Bitget Spot mumu yok');
+  return{rows,source:'Bitget Spot'};
+ }catch(e){bitgetError=e}
+ throw Error('Binance: '+(binanceError?.message||'yok')+' · Bybit: '+(bybitError?.message||'yok')+' · OKX: '+(okxError?.message||'yok')+' · Gate: '+(gateError?.message||'yok')+' · KuCoin: '+(kucoinError?.message||'yok')+' · MEXC: '+(mexcError?.message||'yok')+' · Bitget: '+(bitgetError?.message||'yok'));
 }
 function resultFor(c,raw,tf,source='Binance Spot'){
  const d=raw.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));
