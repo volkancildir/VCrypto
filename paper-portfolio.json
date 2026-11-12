@@ -95,7 +95,7 @@
           "timeframe": "4h",
           "qty": 281.73286963758517,
           "entry": 0.1245,
-          "lastPrice": 0.1276,
+          "lastPrice": 0.1264,
           "target": 0.13320714285714286,
           "target1": 0.13320714285714286,
           "target2": 0.1348285714285714,
@@ -136,7 +136,7 @@
           "timeframe": "1h",
           "qty": 259.6225088212151,
           "entry": 0.146,
-          "lastPrice": 0.146,
+          "lastPrice": 0.14552,
           "target": 0.14713964285714284,
           "target1": 0.14713964285714284,
           "target2": 0.1479435714285714,
@@ -177,7 +177,7 @@
           "timeframe": "1h",
           "qty": 0.12289711284671906,
           "entry": 295.47,
-          "lastPrice": 295.47,
+          "lastPrice": 297.1,
           "target": 301.58035714285717,
           "target1": 301.58035714285717,
           "target2": 304.53505714285717,
@@ -212,16 +212,16 @@
         }
       ],
       "trades": [],
+      "cooldowns": {},
       "summary": {
-        "equityTL": 9520.68758971623,
-        "pnlTL": -479.3124102837701,
-        "returnPct": -4.793124102837698,
+        "equityTL": 9507.510093466406,
+        "pnlTL": -492.48990653359397,
+        "returnPct": -4.924899065335941,
         "realizedTL": 0,
         "openPositions": 5,
         "cashTL": 2.2737367544323206e-13,
-        "exposureTL": 9520.68758971623
-      },
-      "cooldowns": {}
+        "exposureTL": 9507.510093466406
+      }
     },
     "formasyon": {
       "initial": 10000,
@@ -235,7 +235,7 @@
           "timeframe": "4h",
           "qty": 15.208877792423982,
           "entry": 2.599,
-          "lastPrice": 2.51,
+          "lastPrice": 2.571,
           "target": 2.7920000000000003,
           "target1": 2.7920000000000003,
           "target2": 2.8865000000000003,
@@ -281,16 +281,16 @@
         }
       ],
       "trades": [],
+      "cooldowns": {},
       "summary": {
-        "equityTL": 9852.491166812859,
-        "pnlTL": -147.50883318714114,
-        "returnPct": -1.4750883318714103,
+        "equityTL": 9899.085797741045,
+        "pnlTL": -100.9142022589549,
+        "returnPct": -1.0091420225895487,
         "realizedTL": 0,
         "openPositions": 1,
         "cashTL": 7935.236681079352,
-        "exposureTL": 1917.2544857335079
-      },
-      "cooldowns": {}
+        "exposureTL": 1963.849116661693
+      }
     },
     "birlesik": {
       "initial": 10000,
@@ -304,7 +304,7 @@
           "timeframe": "1h",
           "qty": 270.80136249335095,
           "entry": 0.146,
-          "lastPrice": 0.146,
+          "lastPrice": 0.14552,
           "target": 0.14649,
           "target1": 0.14649,
           "target2": 0.14697500000000002,
@@ -345,7 +345,7 @@
           "timeframe": "1h",
           "qty": 0.13373890604196012,
           "entry": 295.51,
-          "lastPrice": 295.51,
+          "lastPrice": 297.1,
           "target": 302.24,
           "target1": 302.24,
           "target2": 304.81,
@@ -380,16 +380,16 @@
         }
       ],
       "trades": [],
+      "cooldowns": {},
       "summary": {
-        "equityTL": 9930.464946661767,
-        "pnlTL": -69.53505333823341,
-        "returnPct": -0.6953505333823329,
+        "equityTL": 9934.616449673345,
+        "pnlTL": -65.38355032665459,
+        "returnPct": -0.6538355032665422,
         "realizedTL": 0,
         "openPositions": 2,
         "cashTL": 5959.86895523648,
-        "exposureTL": 3970.595991425287
-      },
-      "cooldowns": {}
+        "exposureTL": 3974.7474944368655
+      }
     }
   },
   "lastBars": {
@@ -801,7 +801,8 @@
     "1h|MARSCOIN": 1794492000000,
     "4h|XUSD": 1794470400000,
     "1h|XUSD": 1794492000000,
-    "1h|LSK": 1794492000000
+    "1h|LSK": 1794492000000,
+    "4h|LSK": 1794470400000
   },
   "scanBars": {
     "4h": 1794470400000,
@@ -810,41 +811,41 @@
   "formasyonBacktest": {
     "4h": {
       "interval": "4h",
-      "coinsTested": 58,
+      "coinsTested": 59,
       "bars": 499,
       "method": "Chronological 3-fold exit test; next-candle-open entries; Target 1 or confirmed bearish pattern exits; ATR-based stop-loss; 0.1% fee each side; historical analogs influence sizing rather than vetoing low-sample signals",
       "overall": {
-        "trades": 116,
-        "winRatePct": 9.482758620689655,
-        "avgReturnPct": -2.389335073798132,
-        "avgWinPct": 9.8954908517306,
-        "avgLossPct": 3.6763168374249506,
-        "profitFactor": 0.2819861606127042,
-        "grossProfitPct": 108.8503993690366,
-        "grossLossPct": 386.0132679296198
+        "trades": 120,
+        "winRatePct": 10,
+        "avgReturnPct": -2.405651207821584,
+        "avgWinPct": 9.678579967138306,
+        "avgLossPct": 3.7483435605949036,
+        "profitFactor": 0.28689946818957035,
+        "grossProfitPct": 116.14295960565968,
+        "grossLossPct": 404.82110454424964
       },
       "folds": [
         {
           "fold": 1,
-          "trades": 77,
-          "winRatePct": 14.285714285714285,
-          "avgReturnPct": -1.7184733374176822,
-          "avgWinPct": 9.8954908517306,
-          "avgLossPct": 3.654134035609062,
-          "profitFactor": 0.45133770661303635,
-          "grossProfitPct": 108.8503993690366,
-          "grossLossPct": 241.17284635019809
+          "trades": 80,
+          "winRatePct": 15,
+          "avgReturnPct": -1.6866057517223771,
+          "avgWinPct": 9.678579967138306,
+          "avgLossPct": 3.692226760933085,
+          "profitFactor": 0.4625893290615757,
+          "grossProfitPct": 116.14295960565968,
+          "grossLossPct": 251.07141974344978
         },
         {
           "fold": 2,
-          "trades": 37,
+          "trades": 38,
           "winRatePct": 0,
-          "avgReturnPct": -3.8352997376512334,
+          "avgReturnPct": -3.9688250924861537,
           "avgWinPct": 0,
-          "avgLossPct": 3.8352997376512334,
+          "avgLossPct": 3.9688250924861537,
           "profitFactor": 0,
           "grossProfitPct": 0,
-          "grossLossPct": 141.90609029309564
+          "grossLossPct": 150.81535351447383
         },
         {
           "fold": 3,
@@ -860,11 +861,11 @@
       ],
       "sampleWarning": null,
       "survivorshipWarning": "Universe is the current top 100 by market cap, not historical point-in-time membership.",
-      "updatedAt": "2026-11-12T12:19:47.530Z"
+      "updatedAt": "2026-11-12T15:55:08.411Z"
     },
     "1h": {
       "interval": "1h",
-      "coinsTested": 58,
+      "coinsTested": 59,
       "bars": 499,
       "method": "Chronological 3-fold exit test; next-candle-open entries; Target 1 or confirmed bearish pattern exits; ATR-based stop-loss; 0.1% fee each side; historical analogs influence sizing rather than vetoing low-sample signals",
       "overall": {
@@ -914,17 +915,17 @@
       ],
       "sampleWarning": null,
       "survivorshipWarning": "Universe is the current top 100 by market cap, not historical point-in-time membership.",
-      "updatedAt": "2026-11-12T15:30:30.726Z"
+      "updatedAt": "2026-11-12T15:55:12.566Z"
     }
   },
   "fxRate": 0.019891,
-  "updatedAt": "2026-11-12T15:30:30.726Z",
+  "updatedAt": "2026-11-12T15:55:12.567Z",
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
-    "equityTL": 29303.643703190854,
-    "pnlTL": -696.3562968091446,
-    "returnPct": -2.321187656030488,
+    "equityTL": 29341.212340880797,
+    "pnlTL": -658.7876591192035,
+    "returnPct": -2.1959588637306737,
     "openPositions": 8
   },
   "tradeHistoryClearedAt": "2026-11-12T15:54:53.113Z",
