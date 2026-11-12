@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs');
 const vm=require('node:vm');
-const files=['index.html','pattern.html'];
+const files=['index.html','pattern.html','pattern-matcher.js'];
 let checked=0;
 for(const file of files){
  const html=fs.readFileSync(file,'utf8');
