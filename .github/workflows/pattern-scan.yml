@@ -5,6 +5,8 @@ on:
       - 'pattern-scan-worker.js'
       - 'pattern-engine.js'
       - 'pattern-syntax-check.js'
+      - 'pattern-matcher.js'
+      - 'pattern-matcher-test.js'
       - '.github/workflows/pattern-scan.yml'
   workflow_dispatch:
   schedule:
@@ -26,9 +28,11 @@ jobs:
       - name: Syntax and source checks
         run: |
           node --check pattern-scan-worker.js
+          node --check pattern-matcher.js
           node --check pattern-engine.js
           node --check historical-pattern-engine.js
           node pattern-syntax-check.js
+          node pattern-matcher-test.js
       - name: Scan top 500 coins on every timeframe
         run: node pattern-scan-worker.js
       - name: Publish results
