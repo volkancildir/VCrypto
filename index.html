@@ -1289,7 +1289,7 @@ document.addEventListener('visibilitychange',resumePatternAfterBackground);
 window.addEventListener('pageshow',resumePatternAfterBackground);
 window.addEventListener('focus',resumePatternAfterBackground);
 startPatternAutoRefresh();
-function bindPatternCardButtons(){const buttons=[...$('patternSearchRows').querySelectorAll('[data-pattern-id]')];buttons.forEach(btn=>{if(btn.dataset.bound==='1')return;btn.dataset.bound='1';btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId))});return buttons}
+function bindPatternCardButtons(){const root=$('patternSearchRows');if(!root)return[];if(root.dataset.clickDelegated!=='1'){root.dataset.clickDelegated='1';root.addEventListener('click',event=>{const btn=event.target.closest('button[data-pattern-id]');if(!btn||!root.contains(btn))return;openPatternCoin(btn.dataset.patternId)})}return [...root.querySelectorAll('button[data-pattern-id]')]}
 function waitPatternFrame(){return new Promise(resolve=>requestAnimationFrame(()=>resolve()))}
 async function renderPatternCardsInBatches(selected,token){
  const root=$('patternSearchRows'),batchSize=60,fragment=document.createDocumentFragment();
