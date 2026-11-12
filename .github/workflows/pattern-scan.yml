@@ -4,6 +4,7 @@ on:
     paths:
       - 'pattern-scan-worker.js'
       - 'pattern-engine.js'
+      - 'pattern-syntax-check.js'
       - '.github/workflows/pattern-scan.yml'
   workflow_dispatch:
   schedule:
