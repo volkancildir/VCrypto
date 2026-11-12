@@ -70,8 +70,18 @@ function resultFor(c,raw,tf,source='Binance Spot'){
 }
 async function main(){
  const coins=await getUniverse();console.log('Coin evreni',coins.length);
- let output={schema:1,updatedAt:null,coinCount:coins.length,source:'CoinGecko/CoinPaprika + Binance Spot',timeframes:{}};
- try{const old=JSON.parse(fs.readFileSync(OUTPUT,'utf8'));if(old&&old.schema===1&&old.timeframes)output={...old,coinCount:coins.length}}catch(e){}
+ let output={schema:1,updatedAt:null,coinCount:coins.length,source:'CoinGecko/CoinPaprika + Binance/Bybit/OKX Spot',timeframes:{}};
+ try{const old=JSON.parse(fs.readFileSync(OUTPUT,'utf8'));if(old&&old.schema===1&&old.timeframes)output={...old,coinCount:coins.length,source:'CoinGecko/CoinPaprika + Binance/Bybit/OKX Spot'}}catch(e){}
+ // Backfill symbol/name on older result rows so the app can match them even when its market-list provider uses different IDs.
+ const coinById=new Map(coins.map(c=>[c.id,c]));
+ for(const data of Object.values(output.timeframes||{})){
+  for(const row of data?.coins||[]){
+   const coin=coinById.get(row.id);if(!coin)continue;
+   if(!row.symbol)row.symbol=coin.symbol;
+   if(!row.name)row.name=coin.name;
+   if(!row.rank)row.rank=coin.market_cap_rank||null;
+  }
+ }
  const keys=Object.keys(TFS);
  const requested=process.env.SCAN_TIMEFRAME;
  let key=requested&&TFS[requested]?requested:null;
