@@ -817,7 +817,7 @@
       "overall": {
         "trades": 120,
         "winRatePct": 10,
-        "avgReturnPct": -2.405651207821584,
+        "avgReturnPct": -2.4056512078215837,
         "avgWinPct": 9.678579967138306,
         "avgLossPct": 3.7483435605949036,
         "profitFactor": 0.28689946818957035,
@@ -861,7 +861,7 @@
       ],
       "sampleWarning": null,
       "survivorshipWarning": "Universe is the current top 100 by market cap, not historical point-in-time membership.",
-      "updatedAt": "2026-11-12T15:55:08.411Z"
+      "updatedAt": "2026-11-12T15:55:53.430Z"
     },
     "1h": {
       "interval": "1h",
@@ -915,11 +915,11 @@
       ],
       "sampleWarning": null,
       "survivorshipWarning": "Universe is the current top 100 by market cap, not historical point-in-time membership.",
-      "updatedAt": "2026-11-12T15:55:12.566Z"
+      "updatedAt": "2026-11-12T15:55:59.364Z"
     }
   },
   "fxRate": 0.019891,
-  "updatedAt": "2026-11-12T15:55:12.567Z",
+  "updatedAt": "2026-11-12T15:55:59.365Z",
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
