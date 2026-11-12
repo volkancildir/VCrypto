@@ -150,7 +150,9 @@ async function main(){
    const coin=coinById.get(row.id);if(!coin)continue;
    if(!row.symbol)row.symbol=coin.symbol;
    if(!row.name)row.name=coin.name;
-   if(!row.rank)row.rank=coin.market_cap_rank||null;\n   if(!row.coingecko_id)row.coingecko_id=coin.coingecko_id||null;\n   if(!row.coinpaprika_id)row.coinpaprika_id=coin.coinpaprika_id||null;
+   if(!row.rank)row.rank=coin.market_cap_rank||null;
+   if(!row.coingecko_id)row.coingecko_id=coin.coingecko_id||null;
+   if(!row.coinpaprika_id)row.coinpaprika_id=coin.coinpaprika_id||null;
   }
  }
  const keys=Object.keys(TFS);
