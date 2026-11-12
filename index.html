@@ -1289,7 +1289,8 @@ document.addEventListener('visibilitychange',resumePatternAfterBackground);
 window.addEventListener('pageshow',resumePatternAfterBackground);
 window.addEventListener('focus',resumePatternAfterBackground);
 startPatternAutoRefresh();
-function bindPatternCardButtons(){const root=$('patternSearchRows');if(!root)return[];if(root.dataset.clickDelegated!=='1'){root.dataset.clickDelegated='1';root.addEventListener('click',event=>{const btn=event.target.closest('button[data-pattern-id]');if(!btn||!root.contains(btn))return;openPatternCoin(btn.dataset.patternId)})}return [...root.querySelectorAll('button[data-pattern-id]')]}
+const patternBoundCards=new WeakSet();
+function bindPatternCardButtons(){const root=$('patternSearchRows');if(!root)return[];const buttons=[...root.querySelectorAll('button[data-pattern-id]')];buttons.forEach(btn=>{btn.removeAttribute('data-bound');if(patternBoundCards.has(btn))return;patternBoundCards.add(btn);btn.addEventListener('click',event=>{event.preventDefault();const id=btn.getAttribute('data-pattern-id');if(id)openPatternCoin(id)})});return buttons}
 function waitPatternFrame(){return new Promise(resolve=>requestAnimationFrame(()=>resolve()))}
 async function renderPatternCardsInBatches(selected,token){
  const root=$('patternSearchRows'),batchSize=60,fragment=document.createDocumentFragment();
