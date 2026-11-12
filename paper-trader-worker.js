@@ -37,6 +37,8 @@ function indicatorContext(candles,series,btcCandles){
  const sd=Math.sqrt(band.reduce((x,y)=>x+(y-mean)**2,0)/Math.max(1,band.length)),bbWidth=mean>0?4*sd/mean:0,atr=seriesAtr(candles);
  const baseline=v.slice(-21,-1).filter(x=>Number.isFinite(x)&&x>0),avgVolume=baseline.length?baseline.reduce((a,b)=>a+b,0)/baseline.length:0;
  const volumeRatio=avgVolume>0&&Number.isFinite(v[i])?v[i]/avgVolume:0;
+ const legacyBase=v.slice(-25,-5).filter(x=>Number.isFinite(x)&&x>0),legacyRecent=v.slice(-5).filter(x=>Number.isFinite(x)&&x>0);
+ const legacyVolumeRatio=legacyBase.length&&legacyRecent.length?legacyRecent.reduce((a,b)=>a+b,0)/legacyRecent.length/(legacyBase.reduce((a,b)=>a+b,0)/legacyBase.length):0;
  const lastRange=Math.max(h[i]-l[i],1e-12),bodyRatio=Math.abs(c[i]-candles[i].o)/lastRange,closeLocation=(c[i]-l[i])/lastRange,upperWickRatio=(h[i]-Math.max(candles[i].o,c[i]))/lastRange;
  const extensionAtr=e20>0&&atr>0?(c[i]-e20)/atr:Infinity,barMoveAtr=atr>0?(c[i]-candles[i].o)/atr:Infinity;
  const entryQuality=extensionAtr<=1.8&&barMoveAtr<=1.25&&upperWickRatio<=.35&&bodyRatio>=.30&&closeLocation>=.65&&c[i]>candles[i].o;
@@ -50,10 +52,10 @@ function indicatorContext(candles,series,btcCandles){
  const indicatorPassCount=Object.values(indicatorChecks).filter(Boolean).length;
  let score=0;
  if(trend)score+=2;if(c[i]>e20)score+=.5;if(momentum)score+=1;
- if(rsi>=52&&rsi<=68)score+=.75;if(volumeRatio>=1.1)score+=.5;
+ if(rsi>=52&&rsi<=68)score+=.75;if(legacyVolumeRatio>=1.1)score+=.5;
  if(cmf>.05)score+=.5;if(obvUp)score+=.35;if(breakoutUp)score+=1;
  if(rs&&rs.rs20>0)score+=.75;if(rs&&rs.rs50>0)score+=.5;
- return {e9,e20,e50,e200,rsi,hist,prevHist,momentum,obvUp,cmf,breakoutUp,breakdown,bbWidth,atr,volumeRatio,volumeStrong,entryQuality,extensionAtr,barMoveAtr,upperWickRatio,bodyRatio,closeLocation,indicatorChecks,indicatorPassCount,trend,bearish,pullback,rs20:rs?rs.rs20:null,rs50:rs?rs.rs50:null,score};
+ return {e9,e20,e50,e200,rsi,hist,prevHist,momentum,obvUp,cmf,breakoutUp,breakdown,bbWidth,atr,volumeRatio,legacyVolumeRatio,volumeStrong,entryQuality,extensionAtr,barMoveAtr,upperWickRatio,bodyRatio,closeLocation,indicatorChecks,indicatorPassCount,trend,bearish,pullback,rs20:rs?rs.rs20:null,rs50:rs?rs.rs50:null,score};
 }
 function seriesAtr(candles){const trs=[];for(let j=Math.max(1,candles.length-14);j<candles.length;j++){const k=candles[j],p=candles[j-1];trs.push(Math.max(k.h-k.l,Math.abs(k.h-p.c),Math.abs(k.l-p.c)))}return trs.length?trs.reduce((a,b)=>a+b,0)/trs.length:(candles.at(-1)?.c||0)*.03}
 function analyze(candles,E,btcCandles){
@@ -61,24 +63,31 @@ function analyze(candles,E,btcCandles){
  if(entry==null||candles.length<220)return null;
  const pattern=E.detectChartPattern(candles),ctx=indicatorContext(candles,series,btcCandles);
  const last=candles[i],range=Math.max(last.h-last.l,1e-12),body=Math.abs(last.c-last.o)/range,loc=(last.c-last.l)/range;
- const volumeConfirmed=ctx.volumeStrong===true;
+ const legacyVolumeConfirmed=ctx.legacyVolumeRatio>=1.10||ctx.obvUp&&ctx.cmf>.04;
+ const legacyPatternConfirmed=!!(pattern&&pattern.direction===1&&pattern.qualityScore>=65&&body>=.35&&loc>=.65&&last.c>ctx.e20&&ctx.rsi>=48&&ctx.rsi<=72&&legacyVolumeConfirmed&&(ctx.rs20==null||ctx.rs20>-.02));
  const notLate=ctx.entryQuality===true&&ctx.rsi<=68;
- const patternConfirmed=!!(pattern&&pattern.direction===1&&pattern.qualityScore>=65&&body>=.40&&loc>=.70&&last.c>ctx.e20&&ctx.rsi>=48&&ctx.rsi<=68&&volumeConfirmed&&notLate&&(ctx.rs20==null||ctx.rs20>-.02));
- const formasyonConfirmed=patternConfirmed;
- const trendEntry=ctx.trend&&last.c>ctx.e20&&ctx.rsi>=52&&ctx.rsi<=68&&ctx.momentum&&ctx.hist>0&&ctx.volumeRatio>=1.25&&ctx.rs20!=null&&ctx.rs20>0&&notLate;
- const breakoutEntry=ctx.trend&&ctx.breakoutUp&&ctx.rsi>=54&&ctx.rsi<=68&&ctx.momentum&&ctx.hist>0&&ctx.volumeRatio>=1.25&&ctx.rs20!=null&&ctx.rs20>.015&&notLate;
+ const formasyonConfirmed=!!(pattern&&pattern.direction===1&&pattern.qualityScore>=65&&body>=.40&&loc>=.70&&last.c>ctx.e20&&ctx.rsi>=48&&ctx.rsi<=68&&ctx.volumeStrong===true&&notLate&&(ctx.rs20==null||ctx.rs20>-.02));
+ const alSatTrendEntry=ctx.trend&&last.c>ctx.e20&&ctx.rsi>=52&&ctx.rsi<=68&&ctx.momentum&&ctx.hist>0&&ctx.volumeRatio>=1.25&&ctx.rs20!=null&&ctx.rs20>0&&notLate;
+ const alSatBreakoutEntry=ctx.trend&&ctx.breakoutUp&&ctx.rsi>=54&&ctx.rsi<=68&&ctx.momentum&&ctx.hist>0&&ctx.volumeRatio>=1.25&&ctx.rs20!=null&&ctx.rs20>.015&&notLate;
+ const alSatBearishExit=ctx.bearish&&ctx.momentum===false&&ctx.rsi<48;
+ const alSatSignal=alSatTrendEntry||alSatBreakoutEntry?'AL':alSatBearishExit?'SAT':'NÖTR';
+ // Birlesik motorun eski sinyal ve formasyon kurallari korunur.
+ const trendEntry=ctx.trend&&last.c>ctx.e20&&ctx.rsi>=52&&ctx.rsi<=68&&ctx.momentum&&ctx.legacyVolumeRatio>=.90&&ctx.rs20!=null&&ctx.rs20>0;
+ const breakoutEntry=ctx.trend&&ctx.breakoutUp&&ctx.rsi>=54&&ctx.rsi<=72&&ctx.momentum&&ctx.legacyVolumeRatio>=1.20&&ctx.rs20!=null&&ctx.rs20>.015;
  const bearishExit=ctx.bearish&&ctx.momentum===false&&ctx.rsi<48;
  const alSignal=trendEntry||breakoutEntry?'AL':bearishExit?'SAT':'NÖTR';
- const score=ctx.score+(patternConfirmed?1.5:0);
+ const patternConfirmed=legacyPatternConfirmed;
+ const volumeConfirmed=legacyVolumeConfirmed;
+ const score=ctx.score+(legacyPatternConfirmed?1.5:0);
  const threshold=3.5;
  const atr=ctx.atr;
- return {alSignal,pattern,patternConfirmed,formasyonConfirmed,validated:false,atr,atrTarget:entry+2.5*atr,score,threshold,
+ return {alSignal,alSatSignal,pattern,patternConfirmed,formasyonConfirmed,validated:false,atr,atrTarget:entry+2.5*atr,score,threshold,
   rs20:ctx.rs20,rs50:ctx.rs50,volumeRatio:ctx.volumeRatio,volumeConfirmed,volumeStrong:ctx.volumeStrong,indicatorChecks:ctx.indicatorChecks,indicatorPassCount:ctx.indicatorPassCount,
-  trendEntry,breakoutEntry,bearishExit,indicatorContext:ctx,
+  trendEntry,breakoutEntry,bearishExit,alSatTrendEntry,alSatBreakoutEntry,alSatBearishExit,indicatorContext:ctx,
   signalConfidence:Math.min(1,Math.max(.25,(score-threshold+2)/4))};
 }
 function allowed(strategy,a){
- if(strategy==='alSat')return a.alSignal==='AL'&&a.indicatorPassCount>=7&&a.volumeStrong===true&&a.indicatorContext.entryQuality===true;
+ if(strategy==='alSat')return a.alSatSignal==='AL'&&a.indicatorPassCount>=7&&a.volumeStrong===true&&a.indicatorContext.entryQuality===true;
  if(strategy==='formasyon')return a.formasyonConfirmed===true;
  if(strategy==='birlesik')return a.alSignal==='AL'&&a.patternConfirmed===true;
  return false;
@@ -97,7 +106,7 @@ function levels(strategy,a,entry){
  const atr=Math.max(Number(a.atr)||0,entry*.008);
  return {target1:entry+2.5*atr,target2:entry+3.5*atr};
 }
-function shouldExit(strategy,a){if(strategy==='alSat')return a.alSignal==='SAT';if(strategy==='formasyon')return !!(a.pattern&&a.pattern.direction===-1);return a.alSignal==='SAT'||!!(a.pattern&&a.pattern.direction===-1)}
+function shouldExit(strategy,a){if(strategy==='alSat')return a.alSatSignal==='SAT';if(strategy==='formasyon')return !!(a.pattern&&a.pattern.direction===-1);return a.alSignal==='SAT'||!!(a.pattern&&a.pattern.direction===-1)}
 function levels(strategy,a,entry){let target1=strategy!=='alSat'&&a.pattern&&a.pattern.targets?Number(a.pattern.targets[0]):a.atrTarget;if(!(target1>entry))target1=entry+2*a.atr;let target2=strategy!=='alSat'&&a.pattern&&a.pattern.targets&&Number(a.pattern.targets[1])>target1?Number(a.pattern.targets[1]):entry+3*a.atr;if(!(target2>target1))target2=target1+Math.max(a.atr,entry*.01);return {target1,target2}}
 function classifyBtcRegime(candles){
  const c=candles.map(x=>x.c);
@@ -111,7 +120,7 @@ function classifyBtcRegime(candles){
 }
 function regimeAllows(strategy,a,regime){
  // Al/Sat ve Formasyon motorlarinda kullanicinin belirledigi giris kurallari disinda BTC rejim filtresi uygulanmaz.
- if(strategy==='alSat')return a.alSignal==='AL'&&a.indicatorContext.entryQuality===true;
+ if(strategy==='alSat')return a.alSatSignal==='AL'&&a.indicatorContext.entryQuality===true;
  if(strategy==='formasyon')return true;
  // Birlesik motorun eski BTC rejim ve giris kosullari aynen korunur.
  if(regime==='bear')return a.score>=a.threshold+1.25&&a.volumeConfirmed===true;
