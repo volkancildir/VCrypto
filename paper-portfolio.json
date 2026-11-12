@@ -170,23 +170,7 @@
           "entryBar": 1794492000000
         }
       ],
-      "trades": [
-        {
-          "strategy": "alSat",
-          "symbol": "JST",
-          "timeframe": "1h",
-          "entry": 0.146,
-          "exit": 0.14453,
-          "qty": 259.6225088212151,
-          "costTL": 1907.5356278812174,
-          "proceedsTL": 1884.5567321266044,
-          "pnl": -22.97889575461295,
-          "returnPct": -1.2046378279254792,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794497423396,
-          "closedAt": 1794499048819
-        }
-      ],
+      "trades": [],
       "cooldowns": {
         "JST|1h": 1794509848819
       },
@@ -194,7 +178,7 @@
         "equityTL": 9494.601277547183,
         "pnlTL": -505.3987224528173,
         "returnPct": -5.0539872245281785,
-        "realizedTL": -22.97889575461295,
+        "realizedTL": 0,
         "openPositions": 4,
         "cashTL": 1884.5567321266046,
         "exposureTL": 7610.044545420578
@@ -361,29 +345,13 @@
           "entryBar": 1794492000000
         }
       ],
-      "trades": [
-        {
-          "strategy": "birlesik",
-          "symbol": "JST",
-          "timeframe": "1h",
-          "entry": 0.146,
-          "exit": 0.14453,
-          "qty": 270.80136249335095,
-          "costTL": 1989.6705003747052,
-          "proceedsTL": 1965.7021768761172,
-          "pnl": -23.968323498588006,
-          "returnPct": -1.2046378279254863,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794497426301,
-          "closedAt": 1794499048820
-        }
-      ],
+      "trades": [],
       "cooldowns": {},
       "summary": {
         "equityTL": 9911.845167085183,
         "pnlTL": -88.15483291481723,
         "returnPct": -0.881548329148174,
-        "realizedTL": -23.968323498588006,
+        "realizedTL": 0,
         "openPositions": 2,
         "cashTL": 5939.504459642389,
         "exposureTL": 3972.340707442795
@@ -923,11 +891,11 @@
     "returnPct": -2.314892525421963,
     "openPositions": 7
   },
-  "tradeHistoryClearedAt": "2026-11-12T15:54:53.113Z",
+  "tradeHistoryClearedAt": "2026-11-12T15:58:37.846Z",
   "tradeHistoryClearedCount": {
-    "alSat": 11,
-    "formasyon": 1,
-    "birlesik": 4
+    "alSat": 1,
+    "formasyon": 0,
+    "birlesik": 1
   },
   "forceRescanRequestedAt": "2026-11-12T15:56:58.641Z"
 }
