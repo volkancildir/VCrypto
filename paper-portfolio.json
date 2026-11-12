@@ -211,182 +211,17 @@
           "entryBar": 1794492000000
         }
       ],
-      "trades": [
-        {
-          "strategy": "alSat",
-          "symbol": "DOT",
-          "timeframe": "1h",
-          "entry": 0.867,
-          "exit": 0.8522142857142857,
-          "qty": 45.78863368023268,
-          "costTL": 1996.3048400563896,
-          "proceedsTL": 1958.3394965280288,
-          "pnl": -37.96534352836079,
-          "returnPct": -1.9017808686617412,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794406961333,
-          "closedAt": 1794427508403
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "HYPE",
-          "timeframe": "1h",
-          "entry": 72.94,
-          "exit": 72.69,
-          "qty": 0.5449194136476648,
-          "costTL": 1998.7023235955055,
-          "proceedsTL": 1987.8720981548634,
-          "pnl": -10.830225440642153,
-          "returnPct": -0.5418628533517409,
-          "reason": "Trend/momentum çıkış sinyali",
-          "openedAt": 1794406960472,
-          "closedAt": 1794436340161
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "GRAM",
-          "timeframe": "1h",
-          "entry": 1.208,
-          "exit": 1.1636428571428572,
-          "qty": 32.87635037521775,
-          "costTL": 1997.103681529001,
-          "proceedsTL": 1919.9273562124472,
-          "pnl": -77.17632531655386,
-          "returnPct": -3.8644125505525553,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794406960853,
-          "closedAt": 1794436340971
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "XLM",
-          "timeframe": "1h",
-          "entry": 0.1488,
-          "exit": 0.1458,
-          "qty": 267.00620606618344,
-          "costTL": 1997.9028426660673,
-          "proceedsTL": 1953.7112096656836,
-          "pnl": -44.19163300038372,
-          "returnPct": -2.211901002223559,
-          "reason": "Stop-loss: canlı fiyat stop seviyesinin altına indi",
-          "openedAt": 1794406960660,
-          "closedAt": 1794439480288
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "GOOGLB",
-          "timeframe": "1h",
-          "entry": 295.71,
-          "exit": 293.12142857142857,
-          "qty": 0.13138454437113764,
-          "costTL": 1953.7112096656833,
-          "proceedsTL": 1932.739561586247,
-          "pnl": -20.971648079436363,
-          "returnPct": -1.0734262042251888,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794439485058,
-          "closedAt": 1794442183205
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "NIGHT",
-          "timeframe": "1h",
-          "entry": 0.04762,
-          "exit": 0.04606,
-          "qty": 804.3136753678081,
-          "costTL": 1926.0383119780986,
-          "proceedsTL": 1860.6224523429591,
-          "pnl": -65.41585963513944,
-          "returnPct": -3.3963945176124457,
-          "reason": "Stop-loss: canlı fiyat stop seviyesinin altına indi",
-          "openedAt": 1794436341628,
-          "closedAt": 1794456358300
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "JST",
-          "timeframe": "1h",
-          "entry": 0.1445,
-          "exit": 0.143344,
-          "qty": 271.0718105507078,
-          "costTL": 1969.7099618809327,
-          "proceedsTL": 1951.5188323346783,
-          "pnl": -18.191129546254388,
-          "returnPct": -0.9235435621640028,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794427508637,
-          "closedAt": 1794485988856
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "GOOGLB",
-          "timeframe": "1h",
-          "entry": 294.89,
-          "exit": 291.8867857142857,
-          "qty": 0.13023743396727405,
-          "costTL": 1932.7395615862474,
-          "proceedsTL": 1909.2338944449134,
-          "pnl": -23.505667141334015,
-          "returnPct": -1.216183887809609,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794450103211,
-          "closedAt": 1794485990834
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "PROM",
-          "timeframe": "1h",
-          "entry": 5.027,
-          "exit": 4.811,
-          "qty": 7.71167333274691,
-          "costTL": 1950.899825326149,
-          "proceedsTL": 1863.3431975989918,
-          "pnl": -87.55662772715732,
-          "returnPct": -4.488012484829645,
-          "reason": "Stop-loss: canlı fiyat stop seviyesinin altına indi",
-          "openedAt": 1794485991346,
-          "closedAt": 1794490692147
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "SXT",
-          "timeframe": "1h",
-          "entry": 0.00974,
-          "exit": 0.009399285714285714,
-          "qty": 3978.549816322508,
-          "costTL": 1950.1194653960185,
-          "proceedsTL": 1878.1424224866555,
-          "pnl": -71.97704290936304,
-          "returnPct": -3.690904284920123,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794485992732,
-          "closedAt": 1794494094062
-        },
-        {
-          "strategy": "alSat",
-          "symbol": "GRAM",
-          "timeframe": "1h",
-          "entry": 1.261,
-          "exit": 1.2228571428571426,
-          "qty": 30.232765258107744,
-          "costTL": 1918.538057788162,
-          "proceedsTL": 1856.7886275831343,
-          "pnl": -61.74943020502769,
-          "returnPct": -3.2185668641995657,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794490694204,
-          "closedAt": 1794497422613
-        }
-      ],
+      "trades": [],
       "summary": {
         "equityTL": 9520.68758971623,
         "pnlTL": -479.3124102837701,
         "returnPct": -4.793124102837698,
-        "realizedTL": -519.5309325296528,
+        "realizedTL": 0,
         "openPositions": 5,
         "cashTL": 2.2737367544323206e-13,
         "exposureTL": 9520.68758971623
-      }
+      },
+      "cooldowns": {}
     },
     "formasyon": {
       "initial": 10000,
@@ -445,32 +280,17 @@
           "entryBar": 1794412800000
         }
       ],
-      "trades": [
-        {
-          "strategy": "formasyon",
-          "symbol": "ALLO",
-          "timeframe": "4h",
-          "entry": 0.1532,
-          "exit": 0.14627857142857142,
-          "qty": 215.69969040247676,
-          "costTL": 1661.7219814241482,
-          "proceedsTL": 1584.6709731582011,
-          "pnl": -77.05100826594708,
-          "returnPct": -4.636817056479684,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794414112037,
-          "closedAt": 1794485986277
-        }
-      ],
+      "trades": [],
       "summary": {
         "equityTL": 9852.491166812859,
         "pnlTL": -147.50883318714114,
         "returnPct": -1.4750883318714103,
-        "realizedTL": -77.05100826594708,
+        "realizedTL": 0,
         "openPositions": 1,
         "cashTL": 7935.236681079352,
         "exposureTL": 1917.2544857335079
-      }
+      },
+      "cooldowns": {}
     },
     "birlesik": {
       "initial": 10000,
@@ -559,77 +379,17 @@
           "entryBar": 1794492000000
         }
       ],
-      "trades": [
-        {
-          "strategy": "birlesik",
-          "symbol": "NIGHT",
-          "timeframe": "1h",
-          "entry": 0.04527,
-          "exit": 0.04769,
-          "qty": 879.4345040865916,
-          "costTL": 2001.9999999999995,
-          "proceedsTL": 2104.8071570576544,
-          "pnl": 102.80715705765488,
-          "returnPct": 5.135222630252493,
-          "reason": "Hedef 1 gerçekleşti (canlı fiyat kontrolü)",
-          "openedAt": 1794406963372,
-          "closedAt": 1794417763319
-        },
-        {
-          "strategy": "birlesik",
-          "symbol": "GOOGLB",
-          "timeframe": "1h",
-          "entry": 293.58,
-          "exit": 290.72,
-          "qty": 0.13700284710701663,
-          "costTL": 2022.5819928429423,
-          "proceedsTL": 1998.8766323340164,
-          "pnl": -23.705360508925878,
-          "returnPct": -1.172034587117312,
-          "reason": "Stop-loss: canlı fiyat stop seviyesinin altına indi",
-          "openedAt": 1794417770049,
-          "closedAt": 1794436339368
-        },
-        {
-          "strategy": "birlesik",
-          "symbol": "KITE",
-          "timeframe": "1h",
-          "entry": 0.1283,
-          "exit": 0.1237,
-          "qty": 312.5228586674213,
-          "costTL": 2017.8361796690554,
-          "proceedsTL": 1941.602661482221,
-          "pnl": -76.23351818683432,
-          "returnPct": -3.777983512979599,
-          "reason": "Stop-loss: canlı fiyat stop seviyesinin altına indi",
-          "openedAt": 1794467233626,
-          "closedAt": 1794471746537
-        },
-        {
-          "strategy": "birlesik",
-          "symbol": "GRAM",
-          "timeframe": "1h",
-          "entry": 1.261,
-          "exit": 1.2228571428571426,
-          "qty": 31.557026633607684,
-          "costTL": 2002.5742293280512,
-          "proceedsTL": 1938.1200387518982,
-          "pnl": -64.454190576153,
-          "returnPct": -3.2185668641995915,
-          "reason": "Stop-loss gerçekleşti",
-          "openedAt": 1794490695285,
-          "closedAt": 1794497422613
-        }
-      ],
+      "trades": [],
       "summary": {
         "equityTL": 9930.464946661767,
         "pnlTL": -69.53505333823341,
         "returnPct": -0.6953505333823329,
-        "realizedTL": -61.585912214258315,
+        "realizedTL": 0,
         "openPositions": 2,
         "cashTL": 5959.86895523648,
         "exposureTL": 3970.595991425287
-      }
+      },
+      "cooldowns": {}
     }
   },
   "lastBars": {
@@ -1166,5 +926,11 @@
     "pnlTL": -696.3562968091446,
     "returnPct": -2.321187656030488,
     "openPositions": 8
+  },
+  "tradeHistoryClearedAt": "2026-11-12T15:54:53.113Z",
+  "tradeHistoryClearedCount": {
+    "alSat": 11,
+    "formasyon": 1,
+    "birlesik": 4
   }
 }
