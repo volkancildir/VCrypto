@@ -25,4 +25,7 @@ assert.equal(m.find(coins[4],coins[4].id),null,'ambiguous duplicate must not be 
 const m2=create([coins[0]],rows);
 assert.equal(m2.find(coins[0],coins[0].id).id,'same-id');
 assert.equal(m2.find(coins[0],coins[0].id),null,'one server result cannot be assigned twice');
-console.log('Pattern result matching self-test: 6 assertions passed');
+const aliasRows=[{id:'cg-coin',coingecko_id:'cg-coin',coinpaprika_id:'cp-coin',symbol:'XYZ',name:'Alias Coin',rank:40,status:'ok'}];
+const aliasMatcher=create([{id:'cp-coin',symbol:'XYZ',name:'Alias Coin',market_cap_rank:40}],aliasRows);
+assert.equal(aliasMatcher.find({id:'cp-coin',symbol:'XYZ',name:'Alias Coin',market_cap_rank:40},'cp-coin').id,'cg-coin','CoinPaprika alias ID');
+console.log('Pattern result matching self-test: 7 assertions passed');
