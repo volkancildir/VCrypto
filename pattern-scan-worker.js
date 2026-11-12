@@ -155,7 +155,7 @@ async function main(){
    if(!row.coinpaprika_id)row.coinpaprika_id=coin.coinpaprika_id||null;
   }
  }
- // Continue the provider-alias refresh cycle with the next stale timeframe.
+ // Keep advancing the provider-alias refresh cycle through stale timeframes.
  const keys=Object.keys(TFS);
  const requested=process.env.SCAN_TIMEFRAME;
  let key=requested&&TFS[requested]?requested:null;
