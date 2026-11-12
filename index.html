@@ -1245,28 +1245,44 @@ async function runPatternScan(buttons,token){
   const payload=await response.json(),tfData=payload.timeframes&&payload.timeframes[patternTimeframe];
   if(!tfData||!Array.isArray(tfData.coins))throw Error('Bu zaman diliminin sunucu taraması henüz hazır değil.');
   const normSymbol=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const normName=v=>String(v||'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
-  const resultMap=new Map(tfData.coins.map(x=>[x.id,x])),symbolNameMap=new Map(),symbolMap=new Map(),duplicateServerSymbols=new Set(),appSymbolCounts=new Map();
+  const normName=v=>String(v||'').toLocaleLowerCase('tr-TR').replace(/ı/g,'i').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const resultMap=new Map(tfData.coins.map(x=>[x.id,x])),symbolCandidates=new Map(),nameCandidates=new Map(),symbolNameCandidates=new Map(),usedResults=new Set();
+  const addCandidate=(map,key,item)=>{if(!key)return;const list=map.get(key)||[];list.push(item);map.set(key,list)};
   for(const item of tfData.coins){
    const sym=normSymbol(item.symbol),name=normName(item.name);
-   if(sym&&name)symbolNameMap.set(sym+'|'+name,item);
-   if(sym){if(symbolMap.has(sym))duplicateServerSymbols.add(sym);else symbolMap.set(sym,item)}
+   addCandidate(symbolCandidates,sym,item);addCandidate(nameCandidates,name,item);
+   if(sym&&name)addCandidate(symbolNameCandidates,sym+'|'+name,item);
   }
   const coinById=new Map(coins.map(c=>[c.id,c]));
-  for(const btn of buttons){const c=coinById.get(btn.dataset.patternId),sym=normSymbol(c?.symbol);if(sym)appSymbolCounts.set(sym,(appSymbolCounts.get(sym)||0)+1)}
+  function closestRank(candidates,coin){
+   const rank=Number(coin?.market_cap_rank);if(!Number.isFinite(rank))return null;
+   const available=(candidates||[]).filter(x=>!usedResults.has(x)&&Number.isFinite(Number(x.rank)));
+   if(!available.length)return null;
+   const ranked=available.map(x=>({item:x,diff:Math.abs(Number(x.rank)-rank)})).sort((a,b)=>a.diff-b.diff);
+   if(ranked[0].diff>5)return null;
+   if(ranked[1]&&ranked[1].diff===ranked[0].diff)return null;
+   return ranked[0].item;
+  }
+  function findServerResult(coin,id){
+   const exact=resultMap.get(id);if(exact&&!usedResults.has(exact))return exact;
+   const sym=normSymbol(coin?.symbol),name=normName(coin?.name);
+   const both=symbolNameCandidates.get(sym+'|'+name)||[];
+   if(both.length===1&&!usedResults.has(both[0]))return both[0];
+   const byName=nameCandidates.get(name)||[];
+   if(byName.length===1&&!usedResults.has(byName[0]))return byName[0];
+   const bySymbol=symbolCandidates.get(sym)||[];
+   return closestRank(bySymbol,coin)||(bySymbol.length===1&&!usedResults.has(bySymbol[0])?bySymbol[0]:null);
+  }
   let completed=0,unavailable=0,missing=0;
   for(const btn of buttons){
    if(token!==patternScanToken)return;
    const coin=coinById.get(btn.dataset.patternId),box=btn.querySelector('[data-pattern-result]'),move=btn.querySelector('[data-expected-move]');if(!box)continue;
-   const sym=normSymbol(coin?.symbol),name=normName(coin?.name);
-   let result=resultMap.get(btn.dataset.patternId);
-   if(!result&&sym&&name)result=symbolNameMap.get(sym+'|'+name);
-   if(!result&&sym&&appSymbolCounts.get(sym)===1&&!duplicateServerSymbols.has(sym))result=symbolMap.get(sym);
+   const result=findServerResult(coin,btn.dataset.patternId);
    if(!result){
     missing++;btn.dataset.scanDone='1';btn.dataset.targetPct='-1';
     box.innerHTML='<span class="pattern-result-state">Sunucu sonucu bu coinle eşleşmedi</span>';if(move)move.textContent='—';continue;
    }
-   btn.dataset.scanDone='1';completed++;
+   usedResults.add(result);btn.dataset.scanDone='1';completed++;
    if(result.status!=='ok'){
     unavailable++;btn.dataset.targetPct='-1';
     box.innerHTML='<span class="pattern-result-state">Mum verisi alınamadı</span><span class="pattern-result-meta">'+safe(result.reason||'Desteklenen borsalarda yeterli spot verisi bulunamadı')+'</span>';
@@ -1283,7 +1299,7 @@ async function runPatternScan(buttons,token){
   }
   sortPatternCards();patternScanActive=false;patternLastRefreshAt=Date.now();
   const sourceTime=payload.updatedAt?new Date(payload.updatedAt).toLocaleString('tr-TR'):'—';
-  if(status)status.textContent=completed+'/'+buttons.length+' coin sonucu eşleşti · Sunucu: '+(tfData.scanned||0)+' başarılı · '+unavailable+' veri hatası · '+missing+' eşleşmeyen · '+sourceTime+'.';
+  if(status)status.textContent=completed+'/'+buttons.length+' coin sonucu eşleşti · Sunucu: '+(tfData.scanned||0)+' başarılı / '+(tfData.unavailable??'—')+' verisiz · Eşleşenlerde '+unavailable+' veri hatası · '+missing+' eşleşmeyen · '+sourceTime+'.';
   savePatternSnapshot(patternRenderedKey,true);
  }catch(error){
   if(token!==patternScanToken)return;
@@ -1317,7 +1333,7 @@ async function renderPatternCardsInBatches(selected,token){
  return bindPatternCardButtons();
 }
 async function renderPatternSearch(force=false){
- const q=($('patternSearch')?.value||'').trim().toLowerCase(),list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q)),selected=list.slice(0,500),renderKey=patternTimeframe+'|'+q+'|'+selected.map(c=>c.id).join(',');
+ const q=($('patternSearch')?.value||'').trim().toLowerCase(),list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q)),selected=list.slice(0,500),renderKey='scan-v3|'+patternTimeframe+'|'+q+'|'+selected.map(c=>c.id).join(',');
  if(!force&&renderKey===patternRenderedKey&&$('patternSearchRows').children.length)return;
  const token=++patternScanToken;
  if(!force){
