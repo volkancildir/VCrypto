@@ -972,6 +972,14 @@ body{zoom:1.12}
 .market-overview .dominance-visual{background:#142438;border:1px solid #263b50;border-radius:15px;padding:12px;box-sizing:border-box;min-height:100%;}
 @media(max-width:380px){.market-overview .dominance-visual{padding:8px 6px}}
 </style>
+
+<style>
+/* Center only the market-dominance donut within its own card area. */
+.market-overview .dominance-visual{flex-direction:column;justify-content:center;align-items:center;gap:10px;}
+.market-overview .dominance-donut{align-self:center;margin-inline:auto;}
+.market-overview .dominance-details{width:100%;}
+.market-overview .dominance-legend{justify-content:center;}
+</style>
 </head>
 <body>
 <div class="app">
