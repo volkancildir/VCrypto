@@ -1244,13 +1244,34 @@ async function runPatternScan(buttons,token){
   if(!response.ok)throw Error('Sunucu tarama dosyası henüz yayınlanmadı.');
   const payload=await response.json(),tfData=payload.timeframes&&payload.timeframes[patternTimeframe];
   if(!tfData||!Array.isArray(tfData.coins))throw Error('Bu zaman diliminin sunucu taraması henüz hazır değil.');
-  const resultMap=new Map(tfData.coins.map(x=>[x.id,x]));let completed=0,unavailable=0;
+  const normSymbol=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const normName=v=>String(v||'').toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+  const resultMap=new Map(tfData.coins.map(x=>[x.id,x])),symbolNameMap=new Map(),symbolMap=new Map(),duplicateServerSymbols=new Set(),appSymbolCounts=new Map();
+  for(const item of tfData.coins){
+   const sym=normSymbol(item.symbol),name=normName(item.name);
+   if(sym&&name)symbolNameMap.set(sym+'|'+name,item);
+   if(sym){if(symbolMap.has(sym))duplicateServerSymbols.add(sym);else symbolMap.set(sym,item)}
+  }
+  const coinById=new Map(coins.map(c=>[c.id,c]));
+  for(const btn of buttons){const c=coinById.get(btn.dataset.patternId),sym=normSymbol(c?.symbol);if(sym)appSymbolCounts.set(sym,(appSymbolCounts.get(sym)||0)+1)}
+  let completed=0,unavailable=0,missing=0;
   for(const btn of buttons){
    if(token!==patternScanToken)return;
-   const result=resultMap.get(btn.dataset.patternId),box=btn.querySelector('[data-pattern-result]'),move=btn.querySelector('[data-expected-move]');if(!box)continue;
-   if(!result){btn.dataset.scanDone='0';box.innerHTML='<span class="pattern-result-state">Sunucu sonucu bekleniyor…</span>';continue}
+   const coin=coinById.get(btn.dataset.patternId),box=btn.querySelector('[data-pattern-result]'),move=btn.querySelector('[data-expected-move]');if(!box)continue;
+   const sym=normSymbol(coin?.symbol),name=normName(coin?.name);
+   let result=resultMap.get(btn.dataset.patternId);
+   if(!result&&sym&&name)result=symbolNameMap.get(sym+'|'+name);
+   if(!result&&sym&&appSymbolCounts.get(sym)===1&&!duplicateServerSymbols.has(sym))result=symbolMap.get(sym);
+   if(!result){
+    missing++;btn.dataset.scanDone='1';btn.dataset.targetPct='-1';
+    box.innerHTML='<span class="pattern-result-state">Sunucu sonucu bu coinle eşleşmedi</span>';if(move)move.textContent='—';continue;
+   }
    btn.dataset.scanDone='1';completed++;
-   if(result.status!=='ok'){unavailable++;btn.dataset.targetPct='-1';box.innerHTML='<span class="pattern-result-state">Binance verisi alınamadı</span>';if(move)move.textContent='—';continue}
+   if(result.status!=='ok'){
+    unavailable++;btn.dataset.targetPct='-1';
+    box.innerHTML='<span class="pattern-result-state">Mum verisi alınamadı</span><span class="pattern-result-meta">'+safe(result.reason||'Desteklenen borsalarda yeterli spot verisi bulunamadı')+'</span>';
+    if(move)move.textContent='—';continue;
+   }
    const p=result.pattern;
    if(!p){btn.dataset.targetPct='-1';box.innerHTML='<span class="pattern-result-state">Belirgin formasyon tespit edilmedi</span><span class="pattern-result-direction neutral">Nötr · Sinyal yok</span>';if(move)move.textContent='—';continue}
    const dir=Number(p.direction)||0,cls=dir>0?'up':dir<0?'down':'neutral',movePct=Number(result.expectedMovePct)||0;
@@ -1258,11 +1279,11 @@ async function runPatternScan(buttons,token){
    btn.dataset.targetPct=String(Number(result.targetPct)||0);
    const fmt=v=>Number(v).toLocaleString('en-US',{maximumFractionDigits:Number(v)<1?7:3});
    const levels=dir?'<div class="pattern-levels"><div><small>Giriş referansı</small><b>$'+fmt(result.entry)+'</b></div><div><small>Hedef 1 · 1 ATR</small><b>$'+fmt(result.target1)+'</b></div><div><small>Hedef 2 · 2 ATR</small><b>$'+fmt(result.target2)+'</b></div><div><small>Stop · 1 ATR</small><b>$'+fmt(result.stop)+'</b></div></div>':'<div class="pattern-result-meta">Yön net değil; hedef ve stop seviyesi üretilmedi.</div>';
-   box.innerHTML='<span class="pattern-result-name">'+safe(p.name)+'</span><span class="pattern-result-direction '+cls+'">'+(dir>0?'Yukarı yönlü':dir<0?'Aşağı yönlü':'Yönsüz')+'</span><span class="pattern-result-meta">'+(p.confirmed?'Teyitli yapı':'Teyit bekliyor')+' · Tespit puanı '+p.score+'/5 · '+patternTfConfig[patternTimeframe].label+'</span>'+levels+'<span class="pattern-result-meta">'+safe(p.detail)+'</span>';
+   box.innerHTML='<span class="pattern-result-name">'+safe(p.name)+'</span><span class="pattern-result-direction '+cls+'">'+(dir>0?'Yukarı yönlü':dir<0?'Aşağı yönlü':'Yönsüz')+'</span><span class="pattern-result-meta">'+(p.confirmed?'Teyitli yapı':'Teyit bekliyor')+' · Tespit puanı '+p.score+'/5 · '+patternTfConfig[patternTimeframe].label+(result.source?' · '+safe(result.source):'')+'</span>'+levels+'<span class="pattern-result-meta">'+safe(p.detail)+'</span>';
   }
   sortPatternCards();patternScanActive=false;patternLastRefreshAt=Date.now();
   const sourceTime=payload.updatedAt?new Date(payload.updatedAt).toLocaleString('tr-TR'):'—';
-  if(status)status.textContent=completed+'/'+buttons.length+' coin sonucu yüklendi · Sunucu taraması: '+(tfData.scanned||0)+' başarılı · '+sourceTime+' · '+unavailable+' veri hatası.';
+  if(status)status.textContent=completed+'/'+buttons.length+' coin sonucu eşleşti · Sunucu: '+(tfData.scanned||0)+' başarılı · '+unavailable+' veri hatası · '+missing+' eşleşmeyen · '+sourceTime+'.';
   savePatternSnapshot(patternRenderedKey,true);
  }catch(error){
   if(token!==patternScanToken)return;
