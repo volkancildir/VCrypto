@@ -7,9 +7,10 @@
  const normSymbol=v=>String(v||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
  const normName=v=>String(v||'').toLocaleLowerCase('tr-TR').replace(/ı/g,'i').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
  function create(coins,rows){
-  const byId=new Map((rows||[]).map(x=>[x.id,x])),symbols=new Map(),names=new Map(),pairs=new Map(),used=new Set();
+  const byId=new Map(),symbols=new Map(),names=new Map(),pairs=new Map(),used=new Set();
   const add=(map,key,row)=>{if(!key)return;const a=map.get(key)||[];a.push(row);map.set(key,a)};
   for(const row of rows||[]){
+   for(const alias of [row.id,row.coingecko_id,row.coinpaprika_id])if(alias&&!byId.has(alias))byId.set(alias,row);
    const s=normSymbol(row.symbol),n=normName(row.name);
    add(symbols,s,row);add(names,n,row);if(s&&n)add(pairs,s+'|'+n,row);
   }
