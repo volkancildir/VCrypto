@@ -996,6 +996,18 @@ body{zoom:1.12}
 /* Precisely shift only the BTC dominance ring toward the center of its framed panel. */
 .market-overview .dominance-visual > .dominance-donut{transform:translateX(18px)!important;}
 </style>
+
+<style>
+/* Give the market-dominance chart its own full-size card, matching the Fear & Greed panel. */
+.market-overview .dominance-layout{grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important;gap:12px!important;}
+.market-overview .dominance-visual{width:100%;min-width:0;min-height:100%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:12px;padding:12px!important;}
+.market-overview .dominance-visual > .dominance-donut{width:min(100%,176px)!important;height:auto!important;aspect-ratio:1/1;flex:0 1 auto!important;transform:none!important;margin:0 auto!important;}
+.market-overview .dominance-visual > .dominance-details{width:100%;flex:0 0 auto;}
+.market-overview .dominance-visual .dominance-legend{width:100%;grid-template-columns:repeat(2,minmax(0,1fr));justify-content:stretch;gap:8px 5px;}
+.market-overview .fng-inline{height:100%;}
+.market-overview .fng-inline .index-card{height:100%;box-sizing:border-box;}
+@media(max-width:380px){.market-overview .dominance-layout{gap:8px!important;}.market-overview .dominance-visual{padding:9px 7px!important;}.market-overview .dominance-visual > .dominance-donut{width:min(100%,132px)!important;}}
+</style>
 </head>
 <body>
 <div class="app">
