@@ -7,6 +7,7 @@ on:
       - 'pattern-syntax-check.js'
       - 'pattern-matcher.js'
       - 'pattern-matcher-test.js'
+      - 'pattern-universe-test.js'
       - '.github/workflows/pattern-scan.yml'
   workflow_dispatch:
   schedule:
@@ -31,12 +32,15 @@ jobs:
         run: |
           node --check pattern-scan-worker.js
           node --check pattern-matcher.js
+          node --check pattern-universe-test.js
           node --check pattern-engine.js
           node --check historical-pattern-engine.js
           node pattern-syntax-check.js
           node pattern-matcher-test.js
       - name: Scan top 500 coins on every timeframe
         run: node pattern-scan-worker.js
+      - name: Test live coin-universe result matching
+        run: node pattern-universe-test.js
       - name: Publish results
         run: |
           git config user.name "github-actions[bot]"
