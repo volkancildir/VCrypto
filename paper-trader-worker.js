@@ -14,7 +14,7 @@ function blankBook(){return {initial:START,cash:START,positions:[],trades:[],coo
 function blank(){return {initial:30000,strategies:{alSat:blankBook(),formasyon:blankBook(),birlesik:blankBook()},lastBars:{},scanBars:{},formasyonBacktest:{},fxRate:0,updatedAt:null,active:true,engine:'GitHub Actions · 5 dakika kontrol'}}
 function readState(){try{const old=JSON.parse(fs.readFileSync(STATE_FILE,'utf8'));if(old.strategies)return {...blank(),...old,strategies:Object.fromEntries(STRATEGIES.map(k=>[k,{...blankBook(),...(old.strategies[k]||{})}]))}}catch(e){}return blank()}
 function equity(b,rate){return b.cash+b.positions.reduce((a,p)=>a+p.qty*p.lastPrice/rate*(1-FEE),0)}
-function closePos(b,p,price,reason,rate){const i=b.positions.findIndex(x=>x.id===p.id);if(i<0)return;const proceeds=p.qty*price/rate*(1-FEE),pnl=proceeds-p.costTL;b.cash+=proceeds;b.trades.push({strategy:p.strategy,symbol:p.symbol,timeframe:p.timeframe,entry:p.entry,exit:price,qty:p.qty,costTL:p.costTL,proceedsTL:proceeds,pnl,returnPct:p.costTL?pnl/p.costTL*100:0,reason,openedAt:p.openedAt,closedAt:Date.now()});if(pnl<0&&p.strategy!=='birlesik'){b.cooldowns=b.cooldowns||{};b.cooldowns[p.symbol+'|'+p.timeframe]=Date.now()+(p.timeframe==='1h'?3:12)*60*60*1000;}b.positions.splice(i,1)}
+function closePos(b,p,price,reason,rate){const i=b.positions.findIndex(x=>x.id===p.id);if(i<0)return;const proceeds=p.qty*price/rate*(1-FEE),pnl=proceeds-p.costTL;b.cash+=proceeds;if(!b.historyStartAt||Number(p.openedAt)>=b.historyStartAt)b.trades.push({strategy:p.strategy,symbol:p.symbol,timeframe:p.timeframe,entry:p.entry,exit:price,qty:p.qty,costTL:p.costTL,proceedsTL:proceeds,pnl,returnPct:p.costTL?pnl/p.costTL*100:0,reason,openedAt:p.openedAt,closedAt:Date.now()});if(pnl<0&&p.strategy!=='birlesik'){b.cooldowns=b.cooldowns||{};b.cooldowns[p.symbol+'|'+p.timeframe]=Date.now()+(p.timeframe==='1h'?3:12)*60*60*1000;}b.positions.splice(i,1)}
 function relativeStrength(candles,btcCandles){
  if(!Array.isArray(btcCandles)||candles.length<51||btcCandles.length<51)return null;
  const btcByTime=new Map(btcCandles.map(x=>[x.t,x.c]));
@@ -323,6 +323,8 @@ function summarizeFormasyonWalkForward(trades,interval,coinsTested,bars){
 
 async function main(){
  const s=readState();
+ const historyStartAt=Date.parse(s.tradeHistoryClearedAt||'1970-01-01T00:00:00Z')||0;
+ for(const strategy of STRATEGIES)s.strategies[strategy].historyStartAt=historyStartAt;
  const reset=process.env.RESET_STRATEGY;
  const resetApplied=STRATEGIES.includes(reset);
  if(resetApplied){s.strategies[reset]=blankBook();console.log('Reset strategy:',reset,'to 10000 TL')}
