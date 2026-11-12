@@ -198,7 +198,8 @@
         "openPositions": 4,
         "cashTL": 1884.5567321266046,
         "exposureTL": 7610.044545420578
-      }
+      },
+      "historyStartAt": 1794498893113
     },
     "formasyon": {
       "initial": 10000,
@@ -267,7 +268,8 @@
         "openPositions": 1,
         "cashTL": 7935.236681079352,
         "exposureTL": 1963.849116661693
-      }
+      },
+      "historyStartAt": 1794498893113
     },
     "birlesik": {
       "initial": 10000,
@@ -322,7 +324,7 @@
           "timeframe": "1h",
           "qty": 151.84835242520046,
           "entry": 0.2599,
-          "lastPrice": 0.2599,
+          "lastPrice": 0.2592,
           "target": 0.26739999999999997,
           "target1": 0.26739999999999997,
           "target2": 0.27149999999999996,
@@ -378,14 +380,15 @@
       ],
       "cooldowns": {},
       "summary": {
-        "equityTL": 9917.183639401857,
-        "pnlTL": -82.81636059814264,
-        "returnPct": -0.8281636059814246,
+        "equityTL": 9911.845167085183,
+        "pnlTL": -88.15483291481723,
+        "returnPct": -0.881548329148174,
         "realizedTL": -23.968323498588006,
         "openPositions": 2,
         "cashTL": 5939.504459642389,
-        "exposureTL": 3977.6791797594688
-      }
+        "exposureTL": 3972.340707442795
+      },
+      "historyStartAt": 1794498893113
     }
   },
   "lastBars": {
@@ -811,10 +814,10 @@
         "winRatePct": 10,
         "avgReturnPct": -2.4056512078215837,
         "avgWinPct": 9.678579967138306,
-        "avgLossPct": 3.748343560594905,
-        "profitFactor": 0.2868994681895703,
+        "avgLossPct": 3.7483435605949036,
+        "profitFactor": 0.28689946818957035,
         "grossProfitPct": 116.14295960565968,
-        "grossLossPct": 404.8211045442497
+        "grossLossPct": 404.82110454424964
       },
       "folds": [
         {
@@ -853,7 +856,7 @@
       ],
       "sampleWarning": null,
       "survivorshipWarning": "Universe is the current top 100 by market cap, not historical point-in-time membership.",
-      "updatedAt": "2026-11-12T15:57:27.622Z"
+      "updatedAt": "2026-11-12T15:58:21.186Z"
     },
     "1h": {
       "interval": "1h",
@@ -907,17 +910,17 @@
       ],
       "sampleWarning": null,
       "survivorshipWarning": "Universe is the current top 100 by market cap, not historical point-in-time membership.",
-      "updatedAt": "2026-11-12T15:57:33.905Z"
+      "updatedAt": "2026-11-12T15:58:26.231Z"
     }
   },
   "fxRate": 0.019891,
-  "updatedAt": "2026-11-12T15:57:33.906Z",
+  "updatedAt": "2026-11-12T15:58:26.232Z",
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
-    "equityTL": 29310.870714690085,
-    "pnlTL": -689.1292853099148,
-    "returnPct": -2.297097617699717,
+    "equityTL": 29305.53224237341,
+    "pnlTL": -694.4677576265894,
+    "returnPct": -2.314892525421963,
     "openPositions": 7
   },
   "tradeHistoryClearedAt": "2026-11-12T15:54:53.113Z",
