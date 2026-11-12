@@ -1248,6 +1248,7 @@ async function runPatternScan(buttons,token){
   const matcher=window.VCryptoPatternMatcher?.create(coins,tfData.coins);
   if(!matcher)throw Error('Formasyon sonuç eşleştirme modülü yüklenemedi.');
   let completed=0,unavailable=0,missing=0;
+  const coinById=new Map(coins.map(coin=>[String(coin.id),coin]));
   for(const btn of buttons){
    if(token!==patternScanToken)return;
    const coin=coinById.get(btn.dataset.patternId),box=btn.querySelector('[data-pattern-result]'),move=btn.querySelector('[data-expected-move]');if(!box)continue;
@@ -1256,7 +1257,7 @@ async function runPatternScan(buttons,token){
     missing++;btn.dataset.scanDone='1';btn.dataset.targetPct='-1';
     box.innerHTML='<span class="pattern-result-state">Sunucu sonucu bu coinle eşleşmedi</span>';if(move)move.textContent='—';continue;
    }
-   usedResults.add(result);btn.dataset.scanDone='1';completed++;
+   btn.dataset.scanDone='1';completed++;
    if(result.status!=='ok'){
     unavailable++;btn.dataset.targetPct='-1';
     box.innerHTML='<span class="pattern-result-state">Mum verisi alınamadı</span><span class="pattern-result-meta">'+safe(result.reason||'Desteklenen borsalarda yeterli spot verisi bulunamadı')+'</span>';
