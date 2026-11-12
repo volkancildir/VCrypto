@@ -1278,7 +1278,50 @@ window.addEventListener('pageshow',resumePatternAfterBackground);
 window.addEventListener('focus',resumePatternAfterBackground);
 startPatternAutoRefresh();
 function bindPatternCardButtons(){const buttons=[...$('patternSearchRows').querySelectorAll('[data-pattern-id]')];buttons.forEach(btn=>{if(btn.dataset.bound==='1')return;btn.dataset.bound='1';btn.addEventListener('click',()=>openPatternCoin(btn.dataset.patternId))});return buttons}
-function renderPatternSearch(force=false){const q=($('patternSearch')?.value||'').trim().toLowerCase(),list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q)),selected=list.slice(0,500),renderKey=patternTimeframe+'|'+q+'|'+selected.map(c=>c.id).join(',');if(!force&&renderKey===patternRenderedKey&&$('patternSearchRows').children.length)return;if(!force){const snapshot=readPatternSnapshot(renderKey);if(snapshot){patternRenderedKey=renderKey;patternSnapshotStartedAt=snapshot.startedAt;$('patternSearchRows').innerHTML=snapshot.html;const restored=bindPatternCardButtons(),pending=restored.some(btn=>btn.dataset.scanDone!=='1'),token=++patternScanToken;const status=$('patternScanStatus');if(status)status.textContent=pending?'Önceki tarama kaldığı yerden devam ediyor…':'Önceki tarama sonuçları yüklendi · 15 dakika dolana kadar yeniden taranmayacak.';if(snapshot.finishedAt)patternLastRefreshAt=snapshot.finishedAt;if(pending)runPatternScan(restored,token);return}}patternRenderedKey=renderKey;patternSnapshotStartedAt=Date.now();const token=++patternScanToken;$('patternSearchRows').innerHTML=selected.map(patternCardMarkup).join('')||'<div class="empty">Coin bulunamadı.</div>';const buttons=bindPatternCardButtons();if(window.AndroidPatternBridge){try{const symbols=selected.map(c=>String(c.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'')+'USDT');window.AndroidPatternBridge.saveWatchlist(patternTimeframe,symbols.join(','))}catch(e){}}const status=$('patternScanStatus');if(status)status.textContent=patternTfConfig[patternTimeframe].label+' verileri taranıyor; kartlar hedef yüzdesine göre sıralanacak…';savePatternSnapshot(patternRenderedKey);runPatternScan(buttons,token)}
+function waitPatternFrame(){return new Promise(resolve=>requestAnimationFrame(()=>resolve()))}
+async function renderPatternCardsInBatches(selected,token){
+ const root=$('patternSearchRows'),batchSize=60,fragment=document.createDocumentFragment();
+ root.innerHTML='';
+ for(let offset=0;offset<selected.length;offset+=batchSize){
+  if(token!==patternScanToken)return null;
+  const template=document.createElement('template');
+  template.innerHTML=selected.slice(offset,offset+batchSize).map(patternCardMarkup).join('');
+  fragment.appendChild(template.content);
+  root.appendChild(fragment);
+  bindPatternCardButtons();
+  const shown=Math.min(offset+batchSize,selected.length),status=$('patternScanStatus');
+  if(status)status.textContent='Coin kartları hazırlanıyor: '+shown+'/'+selected.length+'…';
+  if(offset+batchSize<selected.length)await waitPatternFrame();
+ }
+ return bindPatternCardButtons();
+}
+async function renderPatternSearch(force=false){
+ const q=($('patternSearch')?.value||'').trim().toLowerCase(),list=coins.slice(0,500).filter(c=>!q||String(c.name||'').toLowerCase().includes(q)||String(c.symbol||'').toLowerCase().includes(q)),selected=list.slice(0,500),renderKey=patternTimeframe+'|'+q+'|'+selected.map(c=>c.id).join(',');
+ if(!force&&renderKey===patternRenderedKey&&$('patternSearchRows').children.length)return;
+ const token=++patternScanToken;
+ if(!force){
+  const snapshot=readPatternSnapshot(renderKey);
+  if(snapshot){
+   patternRenderedKey=renderKey;patternSnapshotStartedAt=snapshot.startedAt;
+   $('patternSearchRows').innerHTML=snapshot.html;
+   const restored=bindPatternCardButtons(),pending=restored.some(btn=>btn.dataset.scanDone!=='1'),status=$('patternScanStatus');
+   if(status)status.textContent=pending?'Önceki tarama kaldığı yerden devam ediyor…':'Önceki tarama sonuçları yüklendi · 15 dakika dolana kadar yeniden taranmayacak.';
+   if(snapshot.finishedAt)patternLastRefreshAt=snapshot.finishedAt;
+   if(pending)runPatternScan(restored,token);
+   return;
+  }
+ }
+ patternRenderedKey=renderKey;patternSnapshotStartedAt=Date.now();
+ if(window.AndroidPatternBridge){try{const symbols=selected.map(c=>String(c.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'')+'USDT');window.AndroidPatternBridge.saveWatchlist(patternTimeframe,symbols.join(','))}catch(e){}}
+ const status=$('patternScanStatus');
+ if(status)status.textContent=patternTfConfig[patternTimeframe].label+' coin kartları hazırlanıyor…';
+ const buttons=await renderPatternCardsInBatches(selected,token);
+ if(!buttons||token!==patternScanToken)return;
+ if(!selected.length){$('patternSearchRows').innerHTML='<div class="empty">Coin bulunamadı.</div>';return}
+ savePatternSnapshot(patternRenderedKey);
+ if(status)status.textContent=patternTfConfig[patternTimeframe].label+' verileri taranıyor; kartlar hedef yüzdesine göre sıralanacak…';
+ runPatternScan(buttons,token);
+}
 function openPatternCoin(id){
  const coin=coins.find(c=>c.id===id);if(!coin)return;
  const sym=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
