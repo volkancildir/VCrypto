@@ -22,6 +22,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - name: Syntax and source checks
+        run: |
+          node --check pattern-scan-worker.js
+          node --check pattern-engine.js
+          node --check historical-pattern-engine.js
+          node pattern-syntax-check.js
       - name: Scan top 500 coins on every timeframe
         run: node pattern-scan-worker.js
       - name: Publish results
