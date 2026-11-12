@@ -297,7 +297,7 @@ function setupCandleReadout(){
  canvas.addEventListener('click',e=>show(e.clientX));
 }
 
-function openDetail(){ $('cardsView').style.display='none';$('detailView').style.display='block';if(candles.length){draw(candles,analyze(candles));reportPatternHeight()}window.scrollTo(0,0); }
+function openDetail(){ $('cardsView').style.display='none';$('detailView').style.display='block';if(candles.length){draw(candles,analyze(candles));reportPatternHeight()}else{load()}window.scrollTo(0,0); }
 function openCards(){ $('detailView').style.display='none';$('cardsView').style.display='block';window.scrollTo(0,0); }
 function renderCardLibrary(patterns){
  const root=$('cardPatternLibrary');if(!root)return;
@@ -348,7 +348,7 @@ async function runBacktest(){
 
 window.addEventListener('message',event=>{if(event.origin!==location.origin||event.data?.type!=='vcrypto-preloaded-candles'||event.data.symbol!==symbol||!Array.isArray(event.data.raw))return;window.__vcryptoPreloadedRaw=event.data.raw;if(window.__vcryptoRawResolve)window.__vcryptoRawResolve(event.data.raw)});
 $('cardsBack').addEventListener('click',openCards);$('refreshCards').addEventListener('click',refreshHistoricalCards);document.addEventListener('click',e=>{if(e.target.closest('[data-card-open]'))openDetail()});$('memoryExport').addEventListener('click',()=>window.VCryptoPatternEngine.exportMemory());$('memoryClear').addEventListener('click',()=>window.VCryptoPatternEngine.clearMemory());$('btRun').addEventListener('click',runBacktest);
-$('backBtn').addEventListener('click',()=>{if(params.get('embed')==='1'&&window.parent!==window){window.parent.postMessage({type:'vcrypto-back-to-pattern-search'},location.origin)}else if(history.length>1)history.back();else location.href='./index.html'});load();if(params.get('embed')!=='1')refreshHistoricalCards();
+$('backBtn').addEventListener('click',()=>{if(params.get('embed')==='1'&&window.parent!==window){window.parent.postMessage({type:'vcrypto-back-to-pattern-search'},location.origin)}else if(history.length>1)history.back();else location.href='./index.html'});refreshHistoricalCards();
 (function enablePullToRefresh(){let startY=0,armed=false;const ignored=el=>!!el.closest('input,textarea,select,a,canvas,iframe,[contenteditable="true"]');document.addEventListener('touchstart',e=>{armed=false;if(e.touches.length!==1||window.scrollY>2||ignored(e.target))return;startY=e.touches[0].clientY;armed=startY<150},{passive:true});document.addEventListener('touchend',e=>{if(!armed)return;armed=false;if(!e.changedTouches||!e.changedTouches.length||window.scrollY>2)return;const delta=e.changedTouches[0].clientY-startY;if(delta>100){if(window.__vcryptoPullRefreshBusy)return;window.__vcryptoPullRefreshBusy=true;const task=load();Promise.resolve(task).finally(()=>{window.__vcryptoPullRefreshBusy=false})}},{passive:true});})();
 </script>
 </body>
