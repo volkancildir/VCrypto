@@ -14,7 +14,7 @@ function blankBook(){return {initial:START,cash:START,positions:[],trades:[],coo
 function blank(){return {initial:30000,strategies:{alSat:blankBook(),formasyon:blankBook(),birlesik:blankBook()},lastBars:{},scanBars:{},formasyonBacktest:{},fxRate:0,updatedAt:null,active:true,engine:'GitHub Actions · 5 dakika kontrol'}}
 function readState(){try{const old=JSON.parse(fs.readFileSync(STATE_FILE,'utf8'));if(old.strategies)return {...blank(),...old,strategies:Object.fromEntries(STRATEGIES.map(k=>[k,{...blankBook(),...(old.strategies[k]||{})}]))}}catch(e){}return blank()}
 function equity(b,rate){return b.cash+b.positions.reduce((a,p)=>a+p.qty*p.lastPrice/rate*(1-FEE),0)}
-function closePos(b,p,price,reason,rate){const i=b.positions.findIndex(x=>x.id===p.id);if(i<0)return;const proceeds=p.qty*price/rate*(1-FEE),pnl=proceeds-p.costTL;b.cash+=proceeds;b.trades.push({strategy:p.strategy,symbol:p.symbol,timeframe:p.timeframe,entry:p.entry,exit:price,qty:p.qty,costTL:p.costTL,proceedsTL:proceeds,pnl,returnPct:p.costTL?pnl/p.costTL*100:0,reason,openedAt:p.openedAt,closedAt:Date.now()});if(pnl<0){b.cooldowns=b.cooldowns||{};b.cooldowns[p.symbol+'|'+p.timeframe]=Date.now()+(p.timeframe==='1h'?3:12)*60*60*1000;}b.positions.splice(i,1)}
+function closePos(b,p,price,reason,rate){const i=b.positions.findIndex(x=>x.id===p.id);if(i<0)return;const proceeds=p.qty*price/rate*(1-FEE),pnl=proceeds-p.costTL;b.cash+=proceeds;b.trades.push({strategy:p.strategy,symbol:p.symbol,timeframe:p.timeframe,entry:p.entry,exit:price,qty:p.qty,costTL:p.costTL,proceedsTL:proceeds,pnl,returnPct:p.costTL?pnl/p.costTL*100:0,reason,openedAt:p.openedAt,closedAt:Date.now()});if(pnl<0&&p.strategy!=='birlesik'){b.cooldowns=b.cooldowns||{};b.cooldowns[p.symbol+'|'+p.timeframe]=Date.now()+(p.timeframe==='1h'?3:12)*60*60*1000;}b.positions.splice(i,1)}
 function relativeStrength(candles,btcCandles){
  if(!Array.isArray(btcCandles)||candles.length<51||btcCandles.length<51)return null;
  const btcByTime=new Map(btcCandles.map(x=>[x.t,x.c]));
@@ -399,9 +399,9 @@ async function main(){
         if(analysis&&shouldExit(strategy,analysis)){const reason=strategy==='alSat'?'Trend/momentum çıkış sinyali':strategy==='formasyon'?'Ters formasyon çıkış sinyali':'Birleşik ters sinyal';closePos(book,pos,last.c,reason,rate);closed++;}
         continue;
        }
-       if(!isNew||book.positions.some(p=>p.symbol===symbol))continue;
+       if(!isNew||book.positions.some(p=>p.symbol===symbol&&(strategy==='birlesik'?p.timeframe===interval:true)))continue;
        const cooldownKey=symbol+'|'+interval;
-       if(Number(book.cooldowns&&book.cooldowns[cooldownKey]||0)>Date.now()){rejections.cooldown++;continue;}
+       if(strategy!=='birlesik'&&Number(book.cooldowns&&book.cooldowns[cooldownKey]||0)>Date.now()){rejections.cooldown++;continue;}
        const analysis=analysisCache||(analysisCache=analyze(candles,E,btcCandles));
        if(!analysis){rejections.noSignal++;continue}
         if(!allowed(strategy,analysis)){if(analysis.indicatorContext&&!analysis.indicatorContext.entryQuality)rejections.lateEntry++;else rejections.signal++;continue}
@@ -428,7 +428,7 @@ async function main(){
         const stopDistance=Math.max(analysis.atr*1.5,entry*.008),stopPct=stopDistance/entry;
         const odds=strategy==='alSat'?historicalOdds(candles,btcCandles,E,strategy,analysis,entry,liveLv,btcMarketRegime):{samples:0,target1ProbabilityPct:null,target2ProbabilityPct:null,adverseProbabilityPct:null,expectedNetPct:null,profitFactor:null,wilsonLowerPct:null};
         if(strategy==='alSat'&&!entryAllowedByOdds(odds,analysis)){rejections.odds++;continue;}
-        if(!(target1NetPct>=stopPct*1.35)){rejections.odds++;continue;}
+        if(strategy!=='birlesik'&&!(target1NetPct>=stopPct*1.35)){rejections.odds++;continue;}
         const riskBudgetTL=total*.0075,allocationTL=Math.min(total*MAX_ALLOC,riskBudgetTL/Math.max(stopPct,.005));
         const allocUsd=allocationTL*rate,desiredQty=allocUsd/entry;
         const desiredCostTL=desiredQty*entry/rate*(1+FEE);
