@@ -114,7 +114,7 @@ function resultFor(c,raw,tf,source='Binance Spot'){
 }
 async function main(){
  const coins=await getUniverse();console.log('Coin evreni',coins.length);
- let output={schema:1,updatedAt:null,coinCount:coins.length,source:'CoinGecko/CoinPaprika + Binance/Bybit/OKX Spot',timeframes:{}};
+ let output={schema:1,updatedAt:null,coinCount:coins.length,source:'CoinGecko/CoinPaprika + Binance/Bybit/OKX/Gate/KuCoin/MEXC/Bitget Spot',timeframes:{}};
  try{const old=JSON.parse(fs.readFileSync(OUTPUT,'utf8'));if(old&&old.schema===1&&old.timeframes)output={...old,coinCount:coins.length,source:'CoinGecko/CoinPaprika + Binance/Bybit/OKX Spot'}}catch(e){}
  // Backfill symbol/name on older result rows so the app can match them even when its market-list provider uses different IDs.
  const coinById=new Map(coins.map(c=>[c.id,c]));
@@ -131,7 +131,7 @@ async function main(){
  let key=requested&&TFS[requested]?requested:null;
  if(!key){
   // Rebuild every timeframe once with the multi-exchange fallback and corrected coin metadata.
-  const outdated=keys.find(k=>!output.timeframes[k]||output.timeframes[k].scanVersion!==2);
+  const outdated=keys.find(k=>!output.timeframes[k]||output.timeframes[k].scanVersion!==3);
   if(outdated)key=outdated;
   else key=keys.slice().sort((a,b)=>Date.parse(output.timeframes[a].updatedAt||0)-Date.parse(output.timeframes[b].updatedAt||0))[0];
  }
@@ -145,7 +145,7 @@ async function main(){
   if(ok<100)throw Error(key+' taraması başarısız: yalnızca '+ok+' coin için geçerli veri bulundu; önceki sonuç korunuyor');
   const updatedAt=new Date().toISOString();
   output.updatedAt=updatedAt;
-  output.timeframes[key]={label:tf.label,total:coins.length,scanned:ok,unavailable,coins:rows,updatedAt,scanVersion:2};
+  output.timeframes[key]={label:tf.label,total:coins.length,scanned:ok,unavailable,coins:rows,updatedAt,scanVersion:3};
   const tmp=OUTPUT+'.tmp';fs.writeFileSync(tmp,JSON.stringify(output));fs.renameSync(tmp,OUTPUT);
   console.log(key,{scanned:ok,unavailable,updatedAt});
  }
