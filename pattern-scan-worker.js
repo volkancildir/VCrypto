@@ -86,8 +86,9 @@ async function main(){
  const requested=process.env.SCAN_TIMEFRAME;
  let key=requested&&TFS[requested]?requested:null;
  if(!key){
-  const missing=['4h','1h','1d','1w','1M','1y'].find(k=>!output.timeframes[k]);
-  if(missing)key=missing;
+  // Rebuild every timeframe once with the multi-exchange fallback and corrected coin metadata.
+  const outdated=keys.find(k=>!output.timeframes[k]||output.timeframes[k].scanVersion!==2);
+  if(outdated)key=outdated;
   else key=keys.slice().sort((a,b)=>Date.parse(output.timeframes[a].updatedAt||0)-Date.parse(output.timeframes[b].updatedAt||0))[0];
  }
  const tf=TFS[key];console.log('Bu çalışmada taranacak zaman dilimi:',key);
@@ -100,7 +101,7 @@ async function main(){
   if(ok<100)throw Error(key+' taraması başarısız: yalnızca '+ok+' coin için geçerli veri bulundu; önceki sonuç korunuyor');
   const updatedAt=new Date().toISOString();
   output.updatedAt=updatedAt;
-  output.timeframes[key]={label:tf.label,total:coins.length,scanned:ok,unavailable,coins:rows,updatedAt};
+  output.timeframes[key]={label:tf.label,total:coins.length,scanned:ok,unavailable,coins:rows,updatedAt,scanVersion:2};
   const tmp=OUTPUT+'.tmp';fs.writeFileSync(tmp,JSON.stringify(output));fs.renameSync(tmp,OUTPUT);
   console.log(key,{scanned:ok,unavailable,updatedAt});
  }
