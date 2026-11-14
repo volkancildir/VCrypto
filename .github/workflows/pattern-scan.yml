@@ -5,6 +5,7 @@ on:
       - 'pattern-scan-worker.js'
       - 'pattern-engine.js'
       - 'pattern-target-engine.js'
+      - 'pattern-target-engine.js'
       - 'pattern.html'
       - 'pattern-syntax-check.js'
       - 'pattern-matcher.js'
