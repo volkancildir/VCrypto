@@ -3,8 +3,10 @@ const fs=require('node:fs');
 global.window={};
 global.localStorage={getItem:()=>null,setItem:()=>{}};
 require('./pattern-engine.js');
+require('./pattern-target-engine.js');
 const engine=global.window.VCryptoPatternEngine;
-if(!engine||typeof engine.scan!=='function')throw new Error('Pattern engine yüklenemedi');
+const targetEngine=global.VCryptoTargetEngine;
+if(!engine||typeof engine.scan!=='function'||!targetEngine||typeof targetEngine.analyze!=='function')throw new Error('Ortak formasyon/hedef motoru yüklenemedi');
 const OUTPUT='pattern-results.json';
 const TFS={
  '1h':{interval:'1h',limit:120,label:'1 saatlik'},
@@ -132,12 +134,11 @@ function resultFor(c,raw,tf,source='Binance Spot'){
  const identity={id:c.id,symbol:c.symbol,name:c.name,rank:c.market_cap_rank||null,coingecko_id:c.coingecko_id||null,coinpaprika_id:c.coinpaprika_id||null};
  const d=raw.map(k=>({t:+k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4],v:+k[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));
  if(d.length<30)return{...identity,status:'unavailable',reason:'Yeterli mum verisi yok',source};
- const ps=engine.scan(d);
- if(!ps.length)return{...identity,status:'ok',pattern:null,targetPct:-1,expectedMovePct:0,source};
- const p=ps.slice().sort((a,b)=>(Number(b.confirmed)-Number(a.confirmed))||b.score-a.score)[0],dir=p.direction>0?1:p.direction<0?-1:0,last=d[d.length-1],tr=[];
- for(let i=Math.max(1,d.length-14);i<d.length;i++)tr.push(Math.max(d[i].h-d[i].l,Math.abs(d[i].h-d[i-1].c),Math.abs(d[i].l-d[i-1].c)));
- const atr=tr.reduce((a,b)=>a+b,0)/Math.max(1,tr.length),entry=last.c,t1=entry+dir*atr,t2=entry+dir*2*atr,move=dir?Math.abs((t2-entry)/entry*100):0;
- return{...identity,status:'ok',pattern:{name:p.name,group:p.group,direction:dir,confirmed:!!p.confirmed,score:p.score,detail:p.detail},entry,target1:t1,target2:t2,stop:dir?entry-dir*atr:null,expectedMovePct:move,targetPct:dir*move,source};
+ const analysis=targetEngine.analyze(d),last=d[d.length-1],dir=analysis.direction>0?1:analysis.direction<0?-1:0;
+ const valid=dir>0?analysis.target1>last.c&&analysis.target2>analysis.target1:dir<0?analysis.target1<last.c&&analysis.target2<analysis.target1:false;
+ if(!valid)return{...identity,status:'ok',pattern:null,targetPct:-1,expectedMovePct:0,reason:'Grafik analizi tutarlı hedef üretmedi',source};
+ const move=Math.abs((analysis.target2-last.c)/last.c*100),score=Math.max(1,Math.min(5,Math.round(analysis.confidence/20)));
+ return{...identity,status:'ok',pattern:{name:analysis.name,group:'Grafik analizi',direction:dir,confirmed:!!analysis.confirmed,score,detail:analysis.reason},entry:last.c,target1:analysis.target1,target2:analysis.target2,stop:analysis.stop,expectedMovePct:move,targetPct:dir*move,confidence:analysis.confidence,targetMethod:analysis.targetMethod,source};
 }
 async function main(){
  const coins=await getUniverse();console.log('Coin evreni',coins.length);
@@ -161,7 +162,7 @@ async function main(){
  let key=requested&&TFS[requested]?requested:null;
  if(!key){
   // Rebuild every timeframe once with the multi-exchange fallback and corrected coin metadata.
-  const outdated=keys.find(k=>!output.timeframes[k]||output.timeframes[k].scanVersion!==4);
+  const outdated=keys.find(k=>!output.timeframes[k]||output.timeframes[k].scanVersion!==5);
   if(outdated)key=outdated;
   else key=keys.slice().sort((a,b)=>Date.parse(output.timeframes[a].updatedAt||0)-Date.parse(output.timeframes[b].updatedAt||0))[0];
  }
