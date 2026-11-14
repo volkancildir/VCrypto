@@ -104,6 +104,7 @@
 <section class="panel"><div class="panel-title">Nasıl yorumlanmalı?</div><p class="warning">Sarı çizgi bir kesin fiyat tahmini değil, tespit edilen formasyona ve mevcut volatiliteye dayalı senaryo çizimidir. Formasyon kırılımı gerçekleşmediyse sonuç teyitsizdir. Hedefler gerçekleşmeyebilir; kripto varlıklar yüksek risk taşır. Bu ekran yatırım tavsiyesi değildir.</p></section>
 </section>>
 <script src="./pattern-engine.js"></script>
+<script src="./pattern-target-engine.js"></script>
 <script src="./backtest-engine.js"></script>
 <script src="./historical-pattern-engine.js"></script>
 <script>
@@ -229,16 +230,7 @@ async function getCoinGeckoCandles(id,selectedView){
  const result=rows.map(x=>[x.t,x.o,x.h,x.l,x.c,x.v]);cgCandleCache.set(candleKey,{time:Date.now(),rows:result});
  return result.map(x=>x.slice());
 }
-function pivots(data,type){
- const out=[],radius=2;
- for(let i=radius;i<data.length-radius;i++){
-  let ok=true;const value=type==='high'?data[i].h:data[i].l;
-  for(let j=i-radius;j<=i+radius;j++){if(j===i)continue;const other=type==='high'?data[j].h:data[j].l;if(type==='high'?other>=value:other<=value){ok=false;break}}
-  if(ok)out.push({i,p:value});
- }
- return out;
-}
-function analyze(data){
+function analyze(data){return window.VCryptoTargetEngine.analyze(data)}
  const last=data[data.length-1],close=last.c,highs=pivots(data,'high'),lows=pivots(data,'low');
  const window=data.slice(-Math.min(30,data.length)),hi=Math.max(...window.map(x=>x.h)),lo=Math.min(...window.map(x=>x.l)),range=Math.max(hi-lo,close*.005);
  const tr=[];for(let i=Math.max(1,data.length-15);i<data.length;i++)tr.push(Math.max(data[i].h-data[i].l,Math.abs(data[i].h-data[i-1].c),Math.abs(data[i].l-data[i-1].c)));
