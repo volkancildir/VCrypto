@@ -9,12 +9,13 @@ const targetEngine=global.VCryptoTargetEngine;
 if(!engine||typeof engine.scan!=='function'||!targetEngine||typeof targetEngine.analyze!=='function')throw new Error('Ortak formasyon/hedef motoru yüklenemedi');
 const OUTPUT='pattern-results.json';
 const TFS={
- '1h':{interval:'1h',limit:120,label:'1 saatlik'},
- '4h':{interval:'4h',limit:120,label:'4 saatlik'},
- '1d':{interval:'1d',limit:120,label:'1 günlük'},
- '1w':{interval:'1w',limit:120,label:'1 haftalık'},
- '1M':{interval:'1M',limit:100,label:'1 aylık'},
- '1y':{interval:'1w',limit:100,label:'1 yıllık · haftalık mumlar'}
+ '1h':{interval:'1h',limit:200,label:'1 saatlik'},
+ '4h':{interval:'4h',limit:200,label:'4 saatlik'},
+ '1d':{interval:'1d',limit:200,label:'1 günlük'},
+ '1w':{interval:'1w',limit:200,label:'1 haftalık'},
+ '1M':{interval:'1M',limit:200,label:'1 aylık'},
+ '1y':{interval:'1w',limit:200,label:'1 yıllık · haftalık mumlar'},
+ '5y':{interval:'1M',limit:200,label:'5 yıllık · aylık mumlar'}
 };
 const excluded=c=>{const s=String(c.symbol||'').toUpperCase(),id=String(c.id||'').toLowerCase(),n=String(c.name||'').toLowerCase();return s==='FIGR_HELOC'||id==='figure-heloc'||s==='SSTN'||s==='PC0000031'||id.includes('rent-financing')||n.includes('rent financing platform')||n.includes('tradable na')};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
