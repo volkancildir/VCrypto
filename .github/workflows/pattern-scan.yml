@@ -4,6 +4,7 @@ on:
     paths:
       - 'pattern-scan-worker.js'
       - 'pattern-engine.js'
+      - 'pattern-target-engine.js'
       - 'pattern.html'
       - 'pattern-syntax-check.js'
       - 'pattern-matcher.js'
@@ -35,6 +36,7 @@ jobs:
           node --check pattern-matcher.js
           node --check pattern-universe-test.js
           node --check pattern-engine.js
+          node --check pattern-target-engine.js
           node --check historical-pattern-engine.js
           node pattern-syntax-check.js
           node pattern-matcher-test.js
