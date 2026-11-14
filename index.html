@@ -1205,33 +1205,32 @@ function patternCardMarkup(c){return '<button type="button" class="pattern-coin-
 function fmtPatternLevel(v){return Number(v).toLocaleString('en-US',{maximumFractionDigits:v<1?7:3})}
 function sortPatternCards(){const root=$('patternSearchRows');if(!root)return;[...root.querySelectorAll('[data-pattern-id]')].sort((a,b)=>Number(b.dataset.targetPct)-Number(a.dataset.targetPct)).forEach(el=>root.appendChild(el))}
 async function loadPatternCard(btn,token=patternScanToken){
- const id=btn.dataset.patternId,coin=coins.find(c=>c.id===id),box=btn.querySelector('[data-pattern-result]');if(!coin||!box)return;
+ const id=btn.dataset.patternId,coin=coins.find(c=>c.id===id),box=btn.querySelector('[data-pattern-result]');if(!coin||!box)return null;
  const symbol=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,''),cfg=patternTfConfig[patternTimeframe]||patternTfConfig['4h'],cacheKey=patternTimeframe+':'+symbol;
  try{
   let item=patternCardCache.get(cacheKey);
   if(item&&Date.now()-(item.savedAt||0)>=15*60*1000){patternCardCache.delete(cacheKey);item=null}
   if(!item){
    let raw=null;
-   if(window.AndroidPatternBridge){
-    try{const nativeRaw=window.AndroidPatternBridge.getPatternCache(cacheKey);if(nativeRaw)raw=JSON.parse(nativeRaw)}catch(e){}
-   }
+   if(window.AndroidPatternBridge){try{const nativeRaw=window.AndroidPatternBridge.getPatternCache(cacheKey);if(nativeRaw)raw=JSON.parse(nativeRaw)}catch(e){}}
    if(!raw)raw=await readPatternCache(cacheKey);
    if(!raw){raw=await getBinanceKlines(symbol+'USDT',cfg.interval,cfg.limit);await writePatternCache(cacheKey,raw)}
    if(window.AndroidPatternBridge&&raw){try{window.AndroidPatternBridge.putPatternCache(cacheKey,JSON.stringify(raw))}catch(e){}}
    const candles=raw.map(x=>({t:+x[0],o:+x[1],h:+x[2],l:+x[3],c:+x[4],v:+x[5]})).filter(x=>[x.o,x.h,x.l,x.c,x.v].every(Number.isFinite));
-   item={raw,candles,patterns:window.VCryptoPatternEngine.scan(candles),savedAt:Date.now()};patternCardCache.set(cacheKey,item)
+   if(candles.length<30)throw Error('Yeterli mum verisi yok');
+   item={raw,candles,analysis:window.VCryptoTargetEngine.analyze(candles),savedAt:Date.now()};patternCardCache.set(cacheKey,item);
   }
-  if(token!==patternScanToken)return;
-  const {candles,patterns}=item,last=candles[candles.length-1];if(!last||candles.length<30)throw Error('Yeterli mum verisi yok');
-  if(!patterns.length){btn.dataset.targetPct='-1';box.innerHTML='<span class="pattern-result-state">Belirgin formasyon tespit edilmedi</span><span class="pattern-result-direction neutral">Nötr · Sinyal yok</span>';btn.querySelector('[data-expected-move]').textContent='—';sortPatternCards();return}
-  const p=patterns.slice().sort((x,y)=>(Number(y.confirmed)-Number(x.confirmed))||y.score-x.score)[0],dir=p.direction>0?1:p.direction<0?-1:0,cls=dir>0?'up':dir<0?'down':'neutral';
-  const ranges=[];for(let i=Math.max(1,candles.length-14);i<candles.length;i++)ranges.push(Math.max(candles[i].h-candles[i].l,Math.abs(candles[i].h-candles[i-1].c),Math.abs(candles[i].l-candles[i-1].c)));
-  const atr=ranges.reduce((x,y)=>x+y,0)/Math.max(1,ranges.length),entry=last.c,target1=entry+dir*atr,target2=entry+dir*2*atr,movePct=dir?Math.abs((target2-entry)/entry*100):0;
-  const move=btn.querySelector('[data-expected-move]');if(move){move.textContent=dir?(dir>0?'+':'−')+movePct.toFixed(2)+'%':'—';move.classList.toggle('up',dir>0);move.classList.toggle('down',dir<0);move.title='Hedef 2’ye kadar teorik fiyat hareketi'}
-  btn.dataset.targetPct=dir?String(dir*movePct):'0';
-  const levels=dir?'<div class="pattern-levels"><div><small>Giriş referansı</small><b>$'+fmtPatternLevel(entry)+'</b></div><div><small>Hedef 1</small><b>$'+fmtPatternLevel(target1)+'</b></div><div><small>Hedef 2</small><b>$'+fmtPatternLevel(target2)+'</b></div><div><small>İptal seviyesi</small><b>$'+fmtPatternLevel(entry-dir*atr)+'</b></div></div>':'<div class="pattern-result-meta">Yön net değil; hedef ve stop seviyesi üretilmedi.</div>';
-  box.innerHTML='<span class="pattern-result-name">'+safe(p.name)+'</span><span class="pattern-result-direction '+cls+'">'+(dir>0?'Yukarı yönlü':dir<0?'Aşağı yönlü':'Yönsüz')+'</span><span class="pattern-result-meta">'+(p.confirmed?'Teyitli yapı':'Teyit bekliyor')+' · Tespit puanı '+p.score+'/5 · '+cfg.label+'</span>'+levels+'<span class="pattern-result-meta">'+safe(p.detail)+'</span>';sortPatternCards();
- }catch(err){if(token!==patternScanToken)return;btn.dataset.targetPct='-1';box.innerHTML='<span class="pattern-result-state">Bu zaman diliminde veri alınamadı</span>';btn.querySelector('[data-expected-move]').textContent='—';sortPatternCards()}
+  if(token!==patternScanToken)return null;
+  const {candles,analysis}=item,last=candles[candles.length-1];if(!last||candles.length<30||!analysis)throw Error('Hedef motoru analiz üretemedi');
+  const dir=analysis.direction>0?1:analysis.direction<0?-1:0,cls=dir>0?'up':dir<0?'down':'neutral';
+  const movePct=dir?Math.abs((analysis.target2-last.c)/last.c*100):0;
+  const move=btn.querySelector('[data-expected-move]');
+  if(move){move.textContent=dir?(dir>0?'+':'−')+movePct.toFixed(2)+'%':'—';move.classList.toggle('up',dir>0);move.classList.toggle('down',dir<0);move.title='Grafikteki aynı motorun Hedef 2 seviyesine göre fiyat hareketi'}
+  btn.dataset.targetPct=dir?String(dir*movePct):'0';btn.dataset.scanDone='1';
+  const levels=dir?'<div class="pattern-levels"><div><small>Giriş referansı</small><b>$'+fmtPatternLevel(last.c)+'</b></div><div><small>Hedef 1</small><b>$'+fmtPatternLevel(analysis.target1)+'</b></div><div><small>Hedef 2</small><b>$'+fmtPatternLevel(analysis.target2)+'</b></div><div><small>İptal seviyesi</small><b>$'+fmtPatternLevel(analysis.stop)+'</b></div></div>':'<div class="pattern-result-meta">Yön net değil; hedef ve stop seviyesi üretilmedi.</div>';
+  box.innerHTML='<span class="pattern-result-name">'+safe(analysis.name)+'</span><span class="pattern-result-direction '+cls+'">'+(dir>0?'Yukarı yönlü':dir<0?'Aşağı yönlü':'Yönsüz')+'</span><span class="pattern-result-meta">'+(analysis.confirmed?'Kırılım teyitli':'Teyit bekliyor')+' · Heuristik güven %'+analysis.confidence+' · '+cfg.label+'</span>'+levels+'<span class="pattern-result-meta">'+safe(analysis.reason)+'</span>';
+  sortPatternCards();return item;
+ }catch(err){if(token!==patternScanToken)return null;btn.dataset.targetPct='-1';box.innerHTML='<span class="pattern-result-state">Bu zaman diliminde veri alınamadı</span><span class="pattern-result-meta">'+safe(err.message||'Hedef analizi yapılamadı')+'</span>';const move=btn.querySelector('[data-expected-move]');if(move)move.textContent='—';sortPatternCards();return null}
 }
 let patternLastRefreshAt=0,patternAutoRefreshTimer=null,patternRenderedKey='',patternScanActive=false,patternSnapshotStartedAt=0;
 const PATTERN_SNAPSHOT_KEY='vcryptoPatternSnapshotV2';
@@ -1335,13 +1334,17 @@ async function renderPatternSearch(force=false){
  if(status)status.textContent=patternTfConfig[patternTimeframe].label+' verileri taranıyor; kartlar hedef yüzdesine göre sıralanacak…';
  runPatternScan(buttons,token);
 }
-function openPatternCoin(id){
+async function openPatternCoin(id){
  const coin=coins.find(c=>c.id===id);if(!coin)return;
  const sym=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
  if(!sym){toast('Bu coin için sembol bulunamadı.');return}
+ const btn=[...document.querySelectorAll('button[data-pattern-id]')].find(el=>el.dataset.patternId===id);
+ if(!btn){toast('Coin kartı bulunamadı.');return}
+ const item=await loadPatternCard(btn,patternScanToken);
+ if(!item){toast('Aynı mum verisiyle grafik açılamadı. Lütfen tekrar dene.');return}
  $('patternSearchPanel').style.display='none';$('patternSelected').style.display='block';
  const frame=$('patternFrame'),q=new URLSearchParams({embed:'1',symbol:sym,name:coin.name||sym,id:coin.id,view:patternTimeframe==='1M'?'1m':patternTimeframe});
- frame.onload=()=>{const item=patternCardCache.get(patternTimeframe+':'+sym);if(item)frame.contentWindow.postMessage({type:'vcrypto-preloaded-candles',symbol:sym,raw:item.raw},location.origin)};
+ frame.onload=()=>frame.contentWindow.postMessage({type:'vcrypto-preloaded-candles',symbol:sym,raw:item.raw},location.origin);
  frame.src='./pattern.html?'+q.toString();
  window.scrollTo({top:0,behavior:'instant'});
 }
@@ -1713,6 +1716,7 @@ window.addEventListener('message',e=>{if(e.origin!==location.origin)return;if(e.
 <script src="./wallet.js?v=17"></script>
 <script src="./paper-trader.js?v=9"></script>
 <script src="./pattern-engine.js"></script>
+<script src="./pattern-target-engine.js"></script>
 
 <style>
 /* Piyasa dağılımı kartını Korku & Açgözlülük kartıyla aynı çerçeve diline getir. */
