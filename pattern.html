@@ -109,6 +109,7 @@
 <script>
 'use strict';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.search);
+const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const symbol=(params.get('symbol')||params.get('coin')||'BTC').toUpperCase().replace(/[^A-Z0-9]/g,'');
 const coinName=params.get('name')||symbol;
 const views={'4h':{interval:'4h',limit:30,label:'4 saatlik mumlar',future:6},'1h':{interval:'1h',limit:30,label:'1 saatlik mumlar',future:6},'1d':{interval:'1d',limit:30,label:'Günlük mumlar',future:6},'1w':{interval:'1w',limit:30,label:'Haftalık mumlar',future:6},'1m':{interval:'1M',limit:24,label:'Aylık mumlar',future:6},'1y':{interval:'1w',limit:52,label:'Son 1 yıl · haftalık mumlar',future:12},'5y':{interval:'1M',limit:60,label:'Son 5 yıl · aylık mumlar',future:8}};
