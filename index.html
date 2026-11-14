@@ -1340,7 +1340,7 @@ function openPatternCoin(id){
  const sym=String(coin.symbol||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
  if(!sym){toast('Bu coin için sembol bulunamadı.');return}
  $('patternSearchPanel').style.display='none';$('patternSelected').style.display='block';
- const frame=$('patternFrame'),q=new URLSearchParams({embed:'1',symbol:sym,name:coin.name||sym,view:patternTimeframe==='1M'?'1m':patternTimeframe});
+ const frame=$('patternFrame'),q=new URLSearchParams({embed:'1',symbol:sym,name:coin.name||sym,id:coin.id,view:patternTimeframe==='1M'?'1m':patternTimeframe});
  frame.onload=()=>{const item=patternCardCache.get(patternTimeframe+':'+sym);if(item)frame.contentWindow.postMessage({type:'vcrypto-preloaded-candles',symbol:sym,raw:item.raw},location.origin)};
  frame.src='./pattern.html?'+q.toString();
  window.scrollTo({top:0,behavior:'instant'});
