@@ -30,7 +30,7 @@
           "timeframe": "1h",
           "qty": 529.1183139922636,
           "entry": 0.07497,
-          "lastPrice": 0.07497,
+          "lastPrice": 0.07575,
           "target": 0.07737,
           "target1": 0.07737,
           "target2": 0.07855499999999999,
@@ -81,13 +81,13 @@
       "trades": [],
       "cooldowns": {},
       "summary": {
-        "equityTL": 9996,
-        "pnlTL": -4,
-        "returnPct": -0.039999999999995595,
+        "equityTL": 10016.787515006003,
+        "pnlTL": 16.78751500600265,
+        "returnPct": 0.16787515006002618,
         "realizedTL": 0,
         "openPositions": 1,
         "cashTL": 7998,
-        "exposureTL": 1997.9999999999998
+        "exposureTL": 2018.7875150060024
       },
       "historyStartAt": 1794502146362
     },
@@ -103,7 +103,7 @@
           "timeframe": "1h",
           "qty": 387.0378488702238,
           "entry": 0.10114,
-          "lastPrice": 0.10381,
+          "lastPrice": 0.10338,
           "target": 0.10958,
           "target1": 0.10958,
           "target2": 0.11323,
@@ -279,13 +279,13 @@
       ],
       "cooldowns": {},
       "summary": {
-        "equityTL": 9818.69396844126,
-        "pnlTL": -181.30603155874087,
-        "returnPct": -1.8130603155874114,
+        "equityTL": 9810.311400691982,
+        "pnlTL": -189.68859930801773,
+        "returnPct": -1.8968859930801774,
         "realizedTL": -229.4086658915802,
         "openPositions": 1,
         "cashTL": 7794.9861590167,
-        "exposureTL": 2023.7078094245594
+        "exposureTL": 2015.3252416752814
       },
       "historyStartAt": 1794502146362
     }
@@ -829,13 +829,13 @@
     }
   },
   "fxRate": 0.019834,
-  "updatedAt": "2026-11-17T23:06:00.014Z",
+  "updatedAt": "2026-11-17T23:53:08.411Z",
   "active": true,
   "engine": "GitHub Actions · 5 dakika kontrol",
   "summary": {
-    "equityTL": 29814.693968441257,
-    "pnlTL": -185.30603155874087,
-    "returnPct": -0.6176867718624801,
+    "equityTL": 29827.098915697985,
+    "pnlTL": -172.90108430201508,
+    "returnPct": -0.5763369476733837,
     "openPositions": 2
   },
   "tradeHistoryClearedAt": "2026-11-12T16:49:06.362Z",
