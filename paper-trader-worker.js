@@ -1,7 +1,7 @@
 'use strict';
 // Fresh portfolio scan trigger: evaluate the corrected entry engines on the current closed candles.
 const fs=require('fs'),https=require('https'),vm=require('vm');
-const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MAX_RISK_PER_TRADE=.01,MIN_MATCHES=20,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
+const STATE_FILE='paper-portfolio.json',START=10000,FEE=.001,MAX_POSITIONS=10,MAX_ALLOC=.20,MAX_RISK_PER_TRADE=.01,MIN_MATCHES=12,EXIT_T1_PROB=35,EXIT_ADVERSE_PROB=65,OUTCOME_HORIZON=24;
 const STRATEGIES=['alSat','formasyon','birlesik'];
 const EXCLUDED=new Set(['USDT','USDC','BUSD','FDUSD','TUSD','DAI','USDE','USDS','USD1','PYUSD','EURC','USTC','USDD','FRAX','USDP','USDX','WBTC','STETH','WSTETH']);
 function get(url,timeout=15000){return new Promise((resolve,reject)=>{const req=https.get(url,{headers:{'user-agent':'VCrypto-paper-simulation/2.0','accept':'application/json'}},res=>{let b='';res.setEncoding('utf8');res.on('data',x=>b+=x);res.on('end',()=>{if(res.statusCode<200||res.statusCode>=300)return reject(Error('HTTP '+res.statusCode+' '+url));try{resolve(JSON.parse(b))}catch(e){reject(e)}})});req.setTimeout(timeout,()=>req.destroy(Error('timeout')));req.on('error',reject)})}
@@ -47,7 +47,7 @@ function indicatorContext(candles,series,btcCandles){
  const momentum=hist!=null&&prevHist!=null&&hist>prevHist;
  const pullback=c[i]>e20&&c[i-1]<=ema(c.slice(0,-1).slice(-120),20)*1.012;
  const rs=relativeStrength(candles,btcCandles);
- const volumeStrong=volumeRatio>=1.25&&entryQuality&&(obvUp||cmf>.04);
+ const volumeStrong=volumeRatio>=1.10&&entryQuality&&(obvUp||cmf>.02);
  const indicatorChecks={emaTrend:trend,priceAboveEma20:e20!=null&&c[i]>e20,macdMomentum:hist!=null&&prevHist!=null&&hist>prevHist&&hist>0,rsiHealthy:rsi>=52&&rsi<=68,volume:volumeRatio>=1.10,moneyFlow:cmf>.05,obvTrend:obvUp,donchianBreakout:breakoutUp,relativeStrength20:rs!=null&&rs.rs20>0,relativeStrength50:rs!=null&&rs.rs50>0};
  const indicatorPassCount=Object.values(indicatorChecks).filter(Boolean).length;
  let score=0;
@@ -66,9 +66,9 @@ function analyze(candles,E,btcCandles){
  const legacyVolumeConfirmed=ctx.legacyVolumeRatio>=1.10||ctx.obvUp&&ctx.cmf>.04;
  const legacyPatternConfirmed=!!(pattern&&pattern.direction===1&&pattern.qualityScore>=65&&body>=.35&&loc>=.65&&last.c>ctx.e20&&ctx.rsi>=48&&ctx.rsi<=72&&legacyVolumeConfirmed&&(ctx.rs20==null||ctx.rs20>-.02));
  const notLate=ctx.entryQuality===true&&ctx.rsi<=68;
- const formasyonConfirmed=!!(pattern&&pattern.direction===1&&pattern.qualityScore>=65&&body>=.40&&loc>=.70&&last.c>ctx.e20&&ctx.rsi>=48&&ctx.rsi<=68&&ctx.volumeStrong===true&&notLate&&(ctx.rs20==null||ctx.rs20>-.02));
- const alSatTrendEntry=ctx.trend&&last.c>ctx.e20&&ctx.rsi>=52&&ctx.rsi<=68&&ctx.momentum&&ctx.hist>0&&ctx.volumeRatio>=1.25&&ctx.rs20!=null&&ctx.rs20>0&&notLate;
- const alSatBreakoutEntry=ctx.trend&&ctx.breakoutUp&&ctx.rsi>=54&&ctx.rsi<=68&&ctx.momentum&&ctx.hist>0&&ctx.volumeRatio>=1.25&&ctx.rs20!=null&&ctx.rs20>.015&&notLate;
+ const formasyonConfirmed=!!(pattern&&pattern.direction===1&&pattern.qualityScore>=70&&body>=.35&&loc>=.65&&last.c>ctx.e20&&ctx.rsi>=46&&ctx.rsi<=72&&ctx.volumeRatio>=1.10&&(ctx.obvUp||ctx.cmf>.02)&&notLate&&(ctx.rs20==null||ctx.rs20>-.02));
+ const alSatTrendEntry=ctx.trend&&last.c>ctx.e20&&ctx.rsi>=48&&ctx.rsi<=70&&ctx.momentum&&ctx.hist>0&&ctx.volumeRatio>=1.10&&ctx.rs20!=null&&ctx.rs20>-.01&&notLate;
+ const alSatBreakoutEntry=ctx.trend&&ctx.breakoutUp&&ctx.rsi>=50&&ctx.rsi<=70&&ctx.momentum&&ctx.hist>0&&ctx.volumeRatio>=1.10&&ctx.rs20!=null&&ctx.rs20>0&&notLate;
  const alSatBearishExit=ctx.bearish&&ctx.momentum===false&&ctx.rsi<48;
  const alSatSignal=alSatTrendEntry||alSatBreakoutEntry?'AL':alSatBearishExit?'SAT':'NÖTR';
  // Birlesik motorun eski sinyal ve formasyon kurallari korunur.
@@ -87,7 +87,7 @@ function analyze(candles,E,btcCandles){
   signalConfidence:Math.min(1,Math.max(.25,(score-threshold+2)/4))};
 }
 function allowed(strategy,a){
- if(strategy==='alSat')return a.alSatSignal==='AL'&&a.indicatorPassCount>=7&&a.volumeStrong===true&&a.indicatorContext.entryQuality===true;
+ if(strategy==='alSat')return a.alSatSignal==='AL'&&a.indicatorPassCount>=6&&a.volumeStrong===true&&a.indicatorContext.entryQuality===true;
  if(strategy==='formasyon')return a.formasyonConfirmed===true;
  if(strategy==='birlesik')return a.alSignal==='AL'&&a.patternConfirmed===true;
  return false;
@@ -180,7 +180,7 @@ function historicalOdds(candles,btcCandles,E,strategy,analysis,entry,lv,regime){
 }
 function entryAllowedByOdds(o,a){
  if(!o||o.samples<MIN_MATCHES)return false;
- return Number.isFinite(o.expectedNetPct)&&o.expectedNetPct>=.15&&Number(o.target1ProbabilityPct)>=45&&Number(o.adverseProbabilityPct)<=55&&(o.profitFactor===null||o.profitFactor>=1.05);
+ return Number.isFinite(o.expectedNetPct)&&o.expectedNetPct>=.05&&Number(o.target1ProbabilityPct)>=42&&Number(o.adverseProbabilityPct)<=58&&(o.profitFactor===null||o.profitFactor>=.95);
 }
 function exitAllowedByOdds(o){
  return o.samples>=MIN_MATCHES&&o.target1ProbabilityPct<EXIT_T1_PROB&&
@@ -237,7 +237,7 @@ function scoreHistoricalPattern(candles,E,patternName){
  }
  const pct=x=>x.total?x.wins/x.total*100:0;
  const oldPct=pct(old),recentPct=pct(recent);
- const weightedScore=old.total>=5&&recent.total>=5?oldPct*.40+recentPct*.60:0;
+ const weightedScore=old.total>=2&&recent.total>=2?oldPct*.35+recentPct*.65:0;
  return {score:weightedScore,weightedScore,year:old,lastSixMonths:recent,yearWinRatePct:oldPct,lastSixMonthsWinRatePct:recentPct,patternName,method:'Same bullish pattern type; next-candle-open entry; first target before pattern stop within 24 candles; unresolved outcomes count as failures; first 6 months 40%, latest 6 months 60%'};
 }
 function formasyonBacktest(candles,btcCandles,E,symbol){
@@ -416,7 +416,7 @@ async function main(){
           console.log('Formasyon history',symbol,interval,formHistoryCache.weightedScore,formHistoryCache.year,formHistoryCache.lastSixMonths);
          }
          historyScore=formHistoryCache;
-         if(!historyScore||!(historyScore.weightedScore>60)){rejections.historyScore++;continue}
+         if(!historyScore||historyScore.year.total+historyScore.lastSixMonths.total<8||historyScore.lastSixMonthsWinRatePct<45||historyScore.weightedScore<50){rejections.historyScore++;continue}
         }
         if(!regimeAllows(strategy,analysis,btcMarketRegime)){rejections.regime++;continue}
         if(rotationLocks[strategy])continue;
