@@ -468,7 +468,13 @@ async function main(){
    await Promise.all(Array.from({length:6},worker));
    s.formasyonBacktest=s.formasyonBacktest||{};
    s.formasyonBacktest[interval]={...summarizeFormasyonWalkForward(backtestTrades,interval,backtestCoins,backtestBars),updatedAt:new Date().toISOString()};
-   s.scanBars[interval]=interval==='4h'?closed4:closed1;
+   s.scanDiagnostics=s.scanDiagnostics||{};
+   s.scanDiagnostics[interval]={updatedAt:new Date().toISOString(),opened,closed,failed,coins:next,universe:coins.length,rejections};
+   if(failed===0){
+    s.scanBars[interval]=interval==='4h'?closed4:closed1;
+   }else{
+    console.log(interval,'incomplete scan; will retry this candle on next scheduled run',{failed,coins:next,universe:coins.length});
+   }
    console.log(interval,{opened,closed,failed,rejections});
   }
  }
